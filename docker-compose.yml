@@ -1,0 +1,50 @@
+services:
+  # ───── MySQL ─────
+  mysql:
+    container_name: scorecard-mysql
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: scorecard
+      MYSQL_USER: scorecard_user
+      MYSQL_PASSWORD: scorecard_password
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - mysql_data:/var/lib/mysql      
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ───── RabbitMQ ─────
+  rabbitmq:
+    container_name: scorecard-rabbit
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+
+  # ───── LocalStack (S3) ─────
+  s3:
+    container_name: scorecard-s3
+    image: localstack/localstack:latest
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=s3
+      - DEBUG=1
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - localstack_data:/var/lib/localstack 
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    restart: always
+
+# ───── Named Volumes 선언 ─────
+volumes:
+  mysql_data:        # MySQL 데이터 영속성
+  localstack_data:   # LocalStack S3 데이터 영속성
