@@ -1,13 +1,12 @@
 package com.geomsahaejo.scorecard.global.exception;
 
+import com.geomsahaejo.scorecard.global.response.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-
-import com.geomsahaejo.scorecard.global.response.ApiResponse;
 
 import java.util.stream.Collectors;
 
@@ -25,12 +24,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(errorType.getHttpStatus())
                 .body(ApiResponse.fail(
-                        errorType.getHttpStatus().value(),
-                        e.getMessage(),
-                        ErrorDetail.builder()
-                                .path(request.getMethod() + " " + request.getRequestURI())
-                                .type(errorType.name())
-                                .build()
+                        ErrorDetail.of(errorType, request.getRequestURI())
                 ));
     }
 
@@ -46,32 +40,26 @@ public class GlobalExceptionHandler {
                 .collect(Collectors.joining(", "));
 
         return ResponseEntity
-                .status(400)
+                .status(ErrorType.INVALID_INPUT.getHttpStatus())
                 .body(ApiResponse.fail(
-                        400,
-                        message,
                         ErrorDetail.builder()
-                                .path(request.getMethod() + " " + request.getRequestURI())
-                                .type(ErrorType.INVALID_INPUT.name())
+                                .code(ErrorType.INVALID_INPUT.name())
+                                .message(message)   // ← Validation 메시지는 동적이라 직접 주입
+                                .path(request.getRequestURI())
                                 .build()
                 ));
     }
 
-    // ── 예상치 못한 예외 처리 ──────────────
+    // ── 예상치 못한 예외 처리 ─────────────────────────────
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleException(
             Exception e,
             HttpServletRequest request
     ) {
         return ResponseEntity
-                .status(500)
+                .status(ErrorType.INTERNAL_SERVER_ERROR.getHttpStatus())
                 .body(ApiResponse.fail(
-                        500,
-                        ErrorType.INTERNAL_SERVER_ERROR.getMessage(),
-                        ErrorDetail.builder()
-                                .path(request.getMethod() + " " + request.getRequestURI())
-                                .type(ErrorType.INTERNAL_SERVER_ERROR.name())
-                                .build()
+                        ErrorDetail.of(ErrorType.INTERNAL_SERVER_ERROR, request.getRequestURI())
                 ));
     }
 }
