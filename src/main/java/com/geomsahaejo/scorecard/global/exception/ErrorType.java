@@ -19,6 +19,7 @@ public enum ErrorType {
     INVALID_PASSWORD(HttpStatus.UNAUTHORIZED, "비밀번호가 올바르지 않습니다."),
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 토큰입니다."),
     EXPIRED_TOKEN(HttpStatus.UNAUTHORIZED, "만료된 토큰입니다."),
+    LOGIN_FAILED(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호를 확인해주세요."),
 
     // ── Job ──────────────────────────────────────────────
     JOB_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 작업입니다."),
