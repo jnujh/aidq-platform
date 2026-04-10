@@ -1,4 +1,4 @@
-package com.geomsahaejo.scorecard.domain.user.entity;
+package com.geomsahaejo.scorecard.user;
 
 import jakarta.persistence.*;
 import lombok.*;

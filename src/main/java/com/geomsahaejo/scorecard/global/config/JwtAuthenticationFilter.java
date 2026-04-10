@@ -1,6 +1,5 @@
 package com.geomsahaejo.scorecard.global.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.geomsahaejo.scorecard.global.exception.CustomException;
 import com.geomsahaejo.scorecard.global.exception.ErrorDetail;
 import com.geomsahaejo.scorecard.global.response.ApiResponse;
@@ -10,6 +9,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import tools.jackson.databind.ObjectMapper;
+
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.StringUtils;

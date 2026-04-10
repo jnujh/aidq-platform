@@ -1,10 +1,12 @@
 package com.geomsahaejo.scorecard.global.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.geomsahaejo.scorecard.global.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import tools.jackson.databind.ObjectMapper;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -43,10 +45,8 @@ public class SecurityConfig {
 
             // 화이트리스트 설정
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(
-                    "POST", "/api/users/signup",
-                    "POST", "/api/users/login"
-                ).permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/users/signup").permitAll() 
+                .requestMatchers(HttpMethod.POST, "/api/users/login").permitAll()    
                 .anyRequest().authenticated()
             )
 

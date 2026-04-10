@@ -1,12 +1,13 @@
 package com.geomsahaejo.scorecard.global.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.geomsahaejo.scorecard.global.exception.ErrorDetail;
 import com.geomsahaejo.scorecard.global.exception.ErrorType;
 import com.geomsahaejo.scorecard.global.response.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import tools.jackson.databind.ObjectMapper;
+
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
