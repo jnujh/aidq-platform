@@ -40,8 +40,9 @@ services:
       - DEBUG=1
       - DOCKER_HOST=unix:///var/run/docker.sock
     volumes:
-      - localstack_data:/var/lib/localstack 
+      - localstack_data:/var/lib/localstack
       - "/var/run/docker.sock:/var/run/docker.sock"
+      - "./infra/localstack/init-s3.sh:/etc/localstack/init/ready.d/init-s3.sh"
     restart: always
 
 # ───── Named Volumes 선언 ─────

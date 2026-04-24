@@ -10,6 +10,7 @@
 # ========================
 .gradle/
 build/
+bin/
 !gradle/wrapper/gradle-wrapper.jar
 
 # ========================
@@ -48,7 +49,7 @@ logs/
 # Docker 로컬 데이터 (혹시 모를 bind mount 잔재)
 # ========================
 mysql-data/
-localstack/
+localstack-data/
 
 # ========================
 # Python / FastAPI (향후 대비)
@@ -69,3 +70,8 @@ node_modules/
 dist/
 .next/
 .nuxt/
+
+# ========================
+# AI 설정 (개인용)
+# ========================
+CLAUDE.md
