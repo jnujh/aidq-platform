@@ -1,6 +1,8 @@
 spring:
   application:
     name: scorecard
+  profiles:
+    active: local
   config:
     import: optional:file:.env[.properties]
 
@@ -29,3 +31,12 @@ jwt:
 
 server:
   port: 8080
+
+cloud:
+  aws:
+    s3:
+      endpoint: ${AWS_S3_ENDPOINT}
+      bucket: ${AWS_S3_BUCKET}
+      region: ${AWS_REGION}
+      access-key: ${AWS_ACCESS_KEY_ID}
+      secret-key: ${AWS_SECRET_ACCESS_KEY}
