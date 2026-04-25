@@ -2,22 +2,26 @@ package com.geomsahaejo.scorecard.job;
 
 import com.geomsahaejo.scorecard.global.exception.CustomException;
 import com.geomsahaejo.scorecard.global.exception.ErrorType;
+import com.geomsahaejo.scorecard.infrastructure.mq.JobMessagePublisher;
 import com.geomsahaejo.scorecard.infrastructure.s3.S3Uploader;
 import com.geomsahaejo.scorecard.job.dto.JobStatusResponse;
 import com.geomsahaejo.scorecard.job.dto.JobSubmitResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class JobService {
 
     private final JobRepository jobRepository;
     private final S3Uploader s3Uploader;
+    private final JobMessagePublisher jobMessagePublisher;
 
     @Transactional
     public JobSubmitResponse submit(Long userId, MultipartFile file) {
@@ -25,6 +29,15 @@ public class JobService {
 
         Job job = Job.create(userId, file.getOriginalFilename(), s3Key);
         jobRepository.save(job);
+
+        try {
+            jobMessagePublisher.publish(job);
+        } catch (Exception e) {
+            log.error("[MQ] 진단 요청 발행 실패 - jobId: {}", job.getId(), e);
+            job.updateStatus(JobStatus.FAILED);
+            jobRepository.save(job);
+            throw new CustomException(ErrorType.MESSAGE_PUBLISH_FAILED);
+        }
 
         return new JobSubmitResponse(job.getId(), job.getStatus().name());
     }
