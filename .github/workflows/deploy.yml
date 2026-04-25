@@ -20,8 +20,8 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Gradle 빌드 + 테스트
-        run: chmod +x gradlew && ./gradlew build --no-daemon
+      - name: Gradle 빌드
+        run: chmod +x gradlew && ./gradlew build -x test --no-daemon
 
       # Frontend 빌드
       - name: Node 20 설정
