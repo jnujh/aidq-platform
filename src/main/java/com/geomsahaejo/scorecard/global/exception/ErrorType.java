@@ -25,6 +25,7 @@ public enum ErrorType {
     JOB_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 작업입니다."),
     JOB_ALREADY_COMPLETED(HttpStatus.CONFLICT, "이미 완료된 작업입니다."),
     FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "파일 업로드에 실패했습니다."),
+    MESSAGE_PUBLISH_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "진단 요청 발행에 실패했습니다."),
 
     // ── Permission ───────────────────────────────────────
     FORBIDDEN(HttpStatus.FORBIDDEN, "접근 권한이 없습니다.");
