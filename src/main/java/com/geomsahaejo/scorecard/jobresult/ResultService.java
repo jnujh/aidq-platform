@@ -2,6 +2,7 @@ package com.geomsahaejo.scorecard.jobresult;
 
 import com.geomsahaejo.scorecard.global.exception.CustomException;
 import com.geomsahaejo.scorecard.global.exception.ErrorType;
+import com.geomsahaejo.scorecard.infrastructure.s3.S3Uploader;
 import com.geomsahaejo.scorecard.job.Job;
 import com.geomsahaejo.scorecard.job.JobRepository;
 import com.geomsahaejo.scorecard.job.JobStatus;
@@ -16,6 +17,7 @@ public class ResultService {
 
     private final JobRepository jobRepository;
     private final JobResultRepository jobResultRepository;
+    private final S3Uploader s3Uploader;
 
     @Transactional(readOnly = true)
     public JobResultResponse getResult(Long userId, Long jobId) {
@@ -40,5 +42,28 @@ public class ResultService {
                 result.getReportS3Key(),
                 result.getCreatedAt()
         );
+    }
+
+    @Transactional(readOnly = true)
+    public String getReport(Long userId, Long jobId) {
+        Job job = jobRepository.findById(jobId)
+                .orElseThrow(() -> new CustomException(ErrorType.JOB_NOT_FOUND));
+
+        if (!job.getUserId().equals(userId)) {
+            throw new CustomException(ErrorType.FORBIDDEN);
+        }
+
+        if (job.getStatus() != JobStatus.DONE) {
+            throw new CustomException(ErrorType.JOB_NOT_COMPLETED);
+        }
+
+        JobResult result = jobResultRepository.findByJobId(jobId)
+                .orElseThrow(() -> new CustomException(ErrorType.RESULT_NOT_FOUND));
+
+        if (result.getReportS3Key() == null) {
+            throw new CustomException(ErrorType.REPORT_NOT_FOUND);
+        }
+
+        return s3Uploader.downloadJson(result.getReportS3Key());
     }
 }

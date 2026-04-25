@@ -6,8 +6,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
+import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
@@ -55,6 +58,20 @@ public class S3Uploader {
         s3Client.putObject(request, RequestBody.fromString(jsonContent));
         log.info("S3 JSON 업로드 완료: bucket={}, key={}", s3Properties.bucket(), key);
         return key;
+    }
+
+    public String downloadJson(String key) {
+        GetObjectRequest request = GetObjectRequest.builder()
+                .bucket(s3Properties.bucket())
+                .key(key)
+                .build();
+
+        try (ResponseInputStream<GetObjectResponse> response = s3Client.getObject(request)) {
+            return new String(response.readAllBytes());
+        } catch (IOException e) {
+            log.error("S3 다운로드 실패: key={}", key, e);
+            throw new CustomException(ErrorType.INTERNAL_SERVER_ERROR);
+        }
     }
 
     private String generateKey(Long userId, String originalFilename) {

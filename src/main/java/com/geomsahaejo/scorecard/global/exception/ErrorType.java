@@ -28,6 +28,7 @@ public enum ErrorType {
     MESSAGE_PUBLISH_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "진단 요청 발행에 실패했습니다."),
     JOB_NOT_COMPLETED(HttpStatus.CONFLICT, "아직 진단이 완료되지 않은 작업입니다."),
     RESULT_NOT_FOUND(HttpStatus.NOT_FOUND, "진단 결과가 존재하지 않습니다."),
+    REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "리포트가 아직 생성되지 않았습니다."),
 
     // ── Permission ───────────────────────────────────────
     FORBIDDEN(HttpStatus.FORBIDDEN, "접근 권한이 없습니다.");

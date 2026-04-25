@@ -15,9 +15,20 @@ public class ResultController {
 
     @GetMapping("/{jobId}")
     public ApiResponse<JobResultResponse> getResult(@PathVariable Long jobId) {
-        Long userId = (Long) SecurityContextHolder.getContext()
-                .getAuthentication().getPrincipal();
+        Long userId = getUserId();
         JobResultResponse response = resultService.getResult(userId, jobId);
         return ApiResponse.success(response);
+    }
+
+    @GetMapping("/{jobId}/report")
+    public ApiResponse<String> getReport(@PathVariable Long jobId) {
+        Long userId = getUserId();
+        String report = resultService.getReport(userId, jobId);
+        return ApiResponse.success(report);
+    }
+
+    private Long getUserId() {
+        return (Long) SecurityContextHolder.getContext()
+                .getAuthentication().getPrincipal();
     }
 }
