@@ -2,7 +2,7 @@ import axios from 'axios';
 import { authStore } from '../stores/authStore';
 
 const client = axios.create({
-  baseURL: 'http://localhost:8080',
+  baseURL: import.meta.env.DEV ? 'http://localhost:8080' : '',
 });
 
 // 요청 인터셉터: 토큰 자동 주입

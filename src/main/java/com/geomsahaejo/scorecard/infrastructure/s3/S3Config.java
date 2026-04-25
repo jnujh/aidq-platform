@@ -33,6 +33,9 @@ public class S3Config {
     public S3Client prodS3Client(S3Properties props) {
         return S3Client.builder()
                 .region(Region.of(props.region()))
+                .credentialsProvider(StaticCredentialsProvider.create(
+                        AwsBasicCredentials.create(props.accessKey(), props.secretKey())
+                ))
                 .build();
     }
 }
