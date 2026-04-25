@@ -44,9 +44,11 @@ public class JobResult {
         this.updatedAt = LocalDateTime.now();
     }
 
-    public static JobResult create(Long jobId) {
+    public static JobResult create(Long jobId, BigDecimal totalScore, String resultS3Key) {
         JobResult result = new JobResult();
         result.jobId = jobId;
+        result.totalScore = totalScore;
+        result.resultS3Key = resultS3Key;
         return result;
     }
 }

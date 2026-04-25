@@ -45,6 +45,18 @@ public class S3Uploader {
         }
     }
 
+    public String uploadJson(String key, String jsonContent) {
+        PutObjectRequest request = PutObjectRequest.builder()
+                .bucket(s3Properties.bucket())
+                .key(key)
+                .contentType("application/json")
+                .build();
+
+        s3Client.putObject(request, RequestBody.fromString(jsonContent));
+        log.info("S3 JSON 업로드 완료: bucket={}, key={}", s3Properties.bucket(), key);
+        return key;
+    }
+
     private String generateKey(Long userId, String originalFilename) {
         String sanitized = (originalFilename != null) ? originalFilename : "unknown";
         String uuid = UUID.randomUUID().toString().substring(0, 8);

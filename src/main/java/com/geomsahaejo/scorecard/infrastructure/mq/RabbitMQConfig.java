@@ -14,6 +14,9 @@ public class RabbitMQConfig {
     public static final String QUEUE = "diagnosis.queue";
     public static final String ROUTING_KEY = "diagnosis.request";
 
+    public static final String RESULT_QUEUE = "result.queue";
+    public static final String RESULT_ROUTING_KEY = "diagnosis.result";
+
     @Bean
     public DirectExchange diagnosisExchange() {
         return new DirectExchange(EXCHANGE);
@@ -27,6 +30,16 @@ public class RabbitMQConfig {
     @Bean
     public Binding diagnosisBinding(Queue diagnosisQueue, DirectExchange diagnosisExchange) {
         return BindingBuilder.bind(diagnosisQueue).to(diagnosisExchange).with(ROUTING_KEY);
+    }
+
+    @Bean
+    public Queue resultQueue() {
+        return QueueBuilder.durable(RESULT_QUEUE).build();
+    }
+
+    @Bean
+    public Binding resultBinding(Queue resultQueue, DirectExchange diagnosisExchange) {
+        return BindingBuilder.bind(resultQueue).to(diagnosisExchange).with(RESULT_ROUTING_KEY);
     }
 
     @Bean
