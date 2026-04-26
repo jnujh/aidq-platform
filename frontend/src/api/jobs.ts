@@ -16,11 +16,12 @@ export interface JobStatusResponse {
 }
 
 export const jobsApi = {
-  submit(file: File, jobName?: string, purpose?: string) {
+  submit(file: File, jobName?: string, purpose?: string, weights?: Record<string, number>) {
     const formData = new FormData();
     formData.append('file', file);
     if (jobName) formData.append('jobName', jobName);
     if (purpose) formData.append('purpose', purpose);
+    if (weights) formData.append('weights', JSON.stringify(weights));
     return client.post<{ success: boolean; data: JobSubmitResponse }>('/api/jobs/submit', formData);
   },
 

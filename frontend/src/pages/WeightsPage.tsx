@@ -75,8 +75,8 @@ export default function WeightsPage() {
     if (!uploadState) return;
     setLoading(true);
     try {
-      await jobsApi.submit(uploadState.file, uploadState.jobName, uploadState.purpose);
-      message.success('진단이 시작되었습니다.');
+      await jobsApi.submit(uploadState.file, uploadState.jobName, uploadState.purpose, useWeights);
+      message.success('맞춤 가중치로 진단이 시작되었습니다.');
       navigate('/jobs');
     } catch (err: any) {
       const msg = err.response?.data?.error?.message || '업로드에 실패했습니다.';
