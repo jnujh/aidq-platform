@@ -45,6 +45,27 @@ services:
       - "./infra/localstack/init-s3.sh:/etc/localstack/init/ready.d/init-s3.sh"
     restart: always
 
+  # ───── DSC 진단 엔진 (Python Worker) ─────
+  engine:
+    container_name: scorecard-engine
+    build:
+      context: ./engine
+      dockerfile: Dockerfile
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: guest
+      RABBITMQ_PASSWORD: guest
+      AWS_S3_ENDPOINT: http://s3:4566
+      AWS_S3_BUCKET: scorecard-uploads
+      AWS_REGION: ap-northeast-2
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+    depends_on:
+      - rabbitmq
+      - s3
+    restart: always
+
 # ───── Named Volumes 선언 ─────
 volumes:
   mysql_data:        # MySQL 데이터 영속성

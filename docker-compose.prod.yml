@@ -57,6 +57,26 @@ services:
         condition: service_healthy
     restart: always
 
+  # ───── DSC 진단 엔진 (Python Worker) ─────
+  engine:
+    container_name: scorecard-engine
+    build:
+      context: ./engine
+      dockerfile: Dockerfile
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-guest}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      AWS_S3_BUCKET: ${AWS_S3_BUCKET}
+      AWS_REGION: ap-northeast-2
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: always
+
   # ───── React Frontend (Nginx) ─────
   frontend:
     container_name: scorecard-frontend
