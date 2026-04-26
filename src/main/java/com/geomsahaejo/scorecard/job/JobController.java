@@ -20,9 +20,12 @@ public class JobController {
 
     @PostMapping("/submit")
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<JobSubmitResponse> submit(@RequestParam("file") MultipartFile file) {
+    public ApiResponse<JobSubmitResponse> submit(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "jobName", required = false) String jobName,
+            @RequestParam(value = "purpose", required = false) String purpose) {
         Long userId = getUserId();
-        JobSubmitResponse response = jobService.submit(userId, file);
+        JobSubmitResponse response = jobService.submit(userId, jobName, purpose, file);
         return ApiResponse.success(response);
     }
 
@@ -38,6 +41,13 @@ public class JobController {
         Long userId = getUserId();
         List<JobStatusResponse> response = jobService.getList(userId);
         return ApiResponse.success(response);
+    }
+
+    @DeleteMapping("/{jobId}")
+    public ApiResponse<Void> delete(@PathVariable Long jobId) {
+        Long userId = getUserId();
+        jobService.delete(userId, jobId);
+        return ApiResponse.success(null);
     }
 
     private Long getUserId() {
