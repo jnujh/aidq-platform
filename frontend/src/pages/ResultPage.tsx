@@ -1,22 +1,34 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Descriptions, Spin, Result, Button, Typography } from 'antd';
+import { Descriptions, Spin, Result, Button, Typography, Card, Divider } from 'antd';
+import { FileTextOutlined } from '@ant-design/icons';
 import { resultsApi, type JobResultResponse } from '../api/results';
 
-const { Title } = Typography;
+const { Title, Paragraph } = Typography;
 
 export default function ResultPage() {
   const { jobId } = useParams<{ jobId: string }>();
   const navigate = useNavigate();
   const [result, setResult] = useState<JobResultResponse | null>(null);
+  const [report, setReport] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchResult = async () => {
+    const fetchData = async () => {
       try {
         const res = await resultsApi.getResult(Number(jobId));
         setResult(res.data.data);
+
+        // 리포트 조회 (없으면 무시)
+        if (res.data.data.reportS3Key) {
+          try {
+            const reportRes = await resultsApi.getReport(Number(jobId));
+            setReport(reportRes.data.data);
+          } catch {
+            // 리포트 없어도 결과는 표시
+          }
+        }
       } catch (err: any) {
         const code = err.response?.data?.error?.code;
         if (code === 'JOB_NOT_COMPLETED') {
@@ -31,7 +43,7 @@ export default function ResultPage() {
       }
     };
 
-    fetchResult();
+    fetchData();
   }, [jobId]);
 
   if (loading) {
@@ -64,12 +76,43 @@ export default function ResultPage() {
             {result.totalScore}점
           </span>
         </Descriptions.Item>
-        <Descriptions.Item label="결과 파일">{result.resultS3Key || '-'}</Descriptions.Item>
-        <Descriptions.Item label="리포트">{result.reportS3Key || '아직 생성되지 않음'}</Descriptions.Item>
         <Descriptions.Item label="생성일시">
           {new Date(result.createdAt).toLocaleString('ko-KR')}
         </Descriptions.Item>
       </Descriptions>
+
+      {report && (
+        <>
+          <Divider />
+          <Card
+            title={<><FileTextOutlined /> LLM 분석 리포트</>}
+            style={{ marginTop: 24 }}
+          >
+            <pre style={{
+              lineHeight: 1.8,
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              fontFamily: 'inherit',
+              fontSize: '14px',
+              margin: 0,
+            }}>
+              {report}
+            </pre>
+          </Card>
+        </>
+      )}
+
+      {!report && result.reportS3Key === null && (
+        <>
+          <Divider />
+          <Card style={{ marginTop: 24, textAlign: 'center' }}>
+            <Paragraph type="secondary">
+              LLM 리포트가 아직 생성되지 않았습니다.
+            </Paragraph>
+          </Card>
+        </>
+      )}
+
       <div style={{ marginTop: 24 }}>
         <Button onClick={() => navigate('/jobs')}>작업 목록으로</Button>
       </div>
