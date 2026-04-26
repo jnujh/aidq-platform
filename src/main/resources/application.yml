@@ -35,6 +35,9 @@ jwt:
   secret: ${JWT_SECRET}
   expiration-ms: 7200000   # 2시간
 
+llm:
+  api-key: ${LLM_API_KEY:}
+
 server:
   port: 8080
 
