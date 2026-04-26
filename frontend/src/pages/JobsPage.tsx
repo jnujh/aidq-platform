@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
-import { Table, Tag, Typography, Empty } from 'antd';
+import { Table, Tag, Typography, Empty, Button, Popconfirm, message } from 'antd';
+import { DeleteOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { jobsApi, type JobStatusResponse } from '../api/jobs';
 
@@ -29,11 +30,21 @@ export default function JobsPage() {
     }
   };
 
+  const handleDelete = async (jobId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await jobsApi.delete(jobId);
+      message.success('작업이 삭제되었습니다.');
+      fetchJobs();
+    } catch {
+      message.error('삭제에 실패했습니다.');
+    }
+  };
+
   useEffect(() => {
     fetchJobs();
   }, []);
 
-  // 폴링: PENDING/PROCESSING이 있으면 3초마다 재조회
   useEffect(() => {
     const hasPending = jobs.some(
       (job) => job.status === 'PENDING' || job.status === 'PROCESSING'
@@ -53,23 +64,32 @@ export default function JobsPage() {
 
   const columns = [
     {
+      title: '작업 이름',
+      dataIndex: 'jobName',
+      key: 'jobName',
+      ellipsis: true,
+      render: (name: string | null, record: JobStatusResponse) =>
+        name || <Text type="secondary">{record.originalFilename}</Text>,
+    },
+    {
       title: '파일명',
       dataIndex: 'originalFilename',
       key: 'originalFilename',
       ellipsis: true,
+      width: 200,
     },
     {
       title: '데이터 유형',
       dataIndex: 'dataType',
       key: 'dataType',
-      width: 140,
+      width: 120,
       render: (dataType: string | null) => dataType || <Text type="secondary">판별 전</Text>,
     },
     {
       title: '상태',
       dataIndex: 'status',
       key: 'status',
-      width: 120,
+      width: 100,
       render: (status: string) => {
         const config = STATUS_CONFIG[status] || { color: 'default', label: status };
         return <Tag color={config.color}>{config.label}</Tag>;
@@ -79,8 +99,30 @@ export default function JobsPage() {
       title: '생성일시',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      width: 180,
+      width: 170,
       render: (date: string) => new Date(date).toLocaleString('ko-KR'),
+    },
+    {
+      title: '',
+      key: 'action',
+      width: 60,
+      render: (_: unknown, record: JobStatusResponse) => (
+        <Popconfirm
+          title="이 작업을 삭제하시겠습니까?"
+          onConfirm={(e) => handleDelete(record.jobId, e as unknown as React.MouseEvent)}
+          onCancel={(e) => e?.stopPropagation()}
+          okText="삭제"
+          cancelText="취소"
+        >
+          <Button
+            type="text"
+            danger
+            icon={<DeleteOutlined />}
+            size="small"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </Popconfirm>
+      ),
     },
   ];
 

@@ -7,6 +7,7 @@ export interface JobSubmitResponse {
 
 export interface JobStatusResponse {
   jobId: number;
+  jobName: string | null;
   originalFilename: string;
   dataType: string | null;
   status: string;
@@ -15,9 +16,11 @@ export interface JobStatusResponse {
 }
 
 export const jobsApi = {
-  submit(file: File) {
+  submit(file: File, jobName?: string, purpose?: string) {
     const formData = new FormData();
     formData.append('file', file);
+    if (jobName) formData.append('jobName', jobName);
+    if (purpose) formData.append('purpose', purpose);
     return client.post<{ success: boolean; data: JobSubmitResponse }>('/api/jobs/submit', formData);
   },
 
@@ -27,5 +30,9 @@ export const jobsApi = {
 
   getList() {
     return client.get<{ success: boolean; data: JobStatusResponse[] }>('/api/jobs/list');
+  },
+
+  delete(jobId: number) {
+    return client.delete<{ success: boolean }>(`/api/jobs/${jobId}`);
   },
 };
