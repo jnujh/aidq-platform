@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -24,14 +25,15 @@ public class JobService {
     private final JobMessagePublisher jobMessagePublisher;
 
     @Transactional
-    public JobSubmitResponse submit(Long userId, String jobName, String purpose, MultipartFile file) {
+    public JobSubmitResponse submit(Long userId, String jobName, String purpose,
+                                     MultipartFile file, Map<String, Double> weights) {
         String s3Key = s3Uploader.upload(userId, file);
 
         Job job = Job.create(userId, jobName, file.getOriginalFilename(), purpose, s3Key);
         jobRepository.save(job);
 
         try {
-            jobMessagePublisher.publish(job);
+            jobMessagePublisher.publish(job, weights);
         } catch (Exception e) {
             log.error("[MQ] 진단 요청 발행 실패 - jobId: {}", job.getId(), e);
             job.updateStatus(JobStatus.FAILED);

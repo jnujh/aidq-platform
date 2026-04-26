@@ -73,13 +73,19 @@ def on_message(ch, method, properties, body):
         target_col, numerical_cols, categorical_cols = auto_detect_columns(df)
         print(f'  target={target_col}, numerical={len(numerical_cols)}, categorical={len(categorical_cols)}')
 
-        # 3) DSC 진단 수행
+        # 3) 맞춤 가중치 적용
+        weights = message.get('weights', None)
+        if weights:
+            print(f'  맞춤 가중치 적용: {weights}')
+
+        # 4) DSC 진단 수행
         result = compute_dsc(
             df=df,
             target_col=target_col,
             numerical_cols=numerical_cols,
             categorical_cols=categorical_cols,
-            reference_df=df,  # 단일 파일이므로 자기 자신을 reference로
+            reference_df=df,
+            weights=weights,
         )
         print(f'  진단 완료: score={result["score"]}, grade={result["grade"]}')
 

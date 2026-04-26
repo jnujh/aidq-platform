@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/jobs")
@@ -23,10 +24,27 @@ public class JobController {
     public ApiResponse<JobSubmitResponse> submit(
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "jobName", required = false) String jobName,
-            @RequestParam(value = "purpose", required = false) String purpose) {
+            @RequestParam(value = "purpose", required = false) String purpose,
+            @RequestParam(value = "weights", required = false) String weightsJson) {
         Long userId = getUserId();
-        JobSubmitResponse response = jobService.submit(userId, jobName, purpose, file);
+        Map<String, Double> weights = parseWeights(weightsJson);
+        JobSubmitResponse response = jobService.submit(userId, jobName, purpose, file, weights);
         return ApiResponse.success(response);
+    }
+
+    private Map<String, Double> parseWeights(String weightsJson) {
+        if (weightsJson == null || weightsJson.isBlank()) return null;
+        try {
+            var mapper = new tools.jackson.databind.ObjectMapper();
+            var node = mapper.readTree(weightsJson);
+            Map<String, Double> weights = new java.util.HashMap<>();
+            for (String field : node.propertyNames()) {
+                weights.put(field, node.path(field).asDouble());
+            }
+            return weights;
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     @GetMapping("/{jobId}/status")

@@ -6,6 +6,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -13,12 +15,13 @@ public class JobMessagePublisher {
 
     private final RabbitTemplate rabbitTemplate;
 
-    public void publish(Job job) {
+    public void publish(Job job, Map<String, Double> weights) {
         DiagnosisMessage message = new DiagnosisMessage(
                 job.getId(),
                 job.getUserId(),
                 job.getS3Key(),
-                job.getOriginalFilename()
+                job.getOriginalFilename(),
+                weights
         );
 
         rabbitTemplate.convertAndSend(
