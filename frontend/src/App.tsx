@@ -10,6 +10,7 @@ import SignupPage from './pages/SignupPage';
 import UploadPage from './pages/UploadPage';
 import JobsPage from './pages/JobsPage';
 import ResultPage from './pages/ResultPage';
+import WeightsPage from './pages/WeightsPage';
 import { authStore } from './stores/authStore';
 
 const { Sider, Header, Content } = Layout;
@@ -39,6 +40,7 @@ function DashboardLayout() {
   const getPageTitle = () => {
     if (location.pathname === '/jobs') return '내 작업 목록';
     if (location.pathname === '/jobs/upload') return '파일 업로드';
+    if (location.pathname === '/jobs/weights') return '가중치 설정';
     if (location.pathname.startsWith('/results')) return '진단 결과';
     return '';
   };
@@ -72,6 +74,7 @@ function DashboardLayout() {
           <Routes>
             <Route path="/jobs" element={<JobsPage />} />
             <Route path="/jobs/upload" element={<UploadPage />} />
+            <Route path="/jobs/weights" element={<WeightsPage />} />
             <Route path="/results/:jobId" element={<ResultPage />} />
             <Route path="*" element={<Navigate to="/jobs" replace />} />
           </Routes>

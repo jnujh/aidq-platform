@@ -23,16 +23,29 @@ export default function UploadPage() {
     }
 
     const file = fileList[0] as unknown as { originFileObj: File };
-    setLoading(true);
-    try {
-      await jobsApi.submit(file.originFileObj, jobName || undefined, purpose || undefined);
-      message.success('파일 업로드 성공! 진단이 시작됩니다.');
-      navigate('/jobs');
-    } catch (err: any) {
-      const msg = err.response?.data?.error?.message || '파일 업로드에 실패했습니다.';
-      message.error(msg);
-    } finally {
-      setLoading(false);
+
+    if (purpose) {
+      // 사용 목적이 있으면 → 가중치 추천 화면으로 이동
+      navigate('/jobs/weights', {
+        state: {
+          file: file.originFileObj,
+          jobName: jobName || undefined,
+          purpose,
+        },
+      });
+    } else {
+      // 사용 목적이 없으면 → 바로 기본 가중치로 진단
+      setLoading(true);
+      try {
+        await jobsApi.submit(file.originFileObj, jobName || undefined);
+        message.success('파일 업로드 성공! 진단이 시작됩니다.');
+        navigate('/jobs');
+      } catch (err: any) {
+        const msg = err.response?.data?.error?.message || '파일 업로드에 실패했습니다.';
+        message.error(msg);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -88,7 +101,7 @@ export default function UploadPage() {
 
       <div style={{ marginTop: 16, textAlign: 'center' }}>
         <Text type="secondary">
-          사용 목적을 입력하면 LLM이 맞춤 평가지표를 추천합니다. (추후 지원)
+          사용 목적을 입력하면 LLM이 맞춤 평가지표 가중치를 추천합니다.
         </Text>
       </div>
     </div>
