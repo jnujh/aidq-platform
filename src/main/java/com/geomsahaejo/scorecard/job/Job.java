@@ -17,8 +17,14 @@ public class Job {
     @Column(nullable = false)
     private Long userId;
 
+    @Column(length = 100)
+    private String jobName;
+
     @Column(nullable = false)
     private String originalFilename;
+
+    @Column(length = 500)
+    private String purpose;
 
     @Column(nullable = false, length = 500)
     private String s3Key;
@@ -48,10 +54,13 @@ public class Job {
         this.updatedAt = LocalDateTime.now();
     }
 
-    public static Job create(Long userId, String originalFilename, String s3Key) {
+    public static Job create(Long userId, String jobName, String originalFilename,
+                             String purpose, String s3Key) {
         Job job = new Job();
         job.userId = userId;
+        job.jobName = jobName;
         job.originalFilename = originalFilename;
+        job.purpose = purpose;
         job.s3Key = s3Key;
         job.status = JobStatus.PENDING;
         return job;

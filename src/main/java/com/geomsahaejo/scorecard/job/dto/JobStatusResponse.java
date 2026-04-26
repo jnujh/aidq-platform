@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 
 public record JobStatusResponse(
         Long jobId,
+        String jobName,
         String originalFilename,
         String dataType,
         String status,

@@ -24,10 +24,10 @@ public class JobService {
     private final JobMessagePublisher jobMessagePublisher;
 
     @Transactional
-    public JobSubmitResponse submit(Long userId, MultipartFile file) {
+    public JobSubmitResponse submit(Long userId, String jobName, String purpose, MultipartFile file) {
         String s3Key = s3Uploader.upload(userId, file);
 
-        Job job = Job.create(userId, file.getOriginalFilename(), s3Key);
+        Job job = Job.create(userId, jobName, file.getOriginalFilename(), purpose, s3Key);
         jobRepository.save(job);
 
         try {
@@ -55,6 +55,13 @@ public class JobService {
                 .toList();
     }
 
+    @Transactional
+    public void delete(Long userId, Long jobId) {
+        Job job = getByIdAndUserId(jobId, userId);
+        jobRepository.delete(job);
+        log.info("[JOB] 작업 삭제 - jobId: {}, userId: {}", jobId, userId);
+    }
+
     private Job getByIdAndUserId(Long jobId, Long userId) {
         Job job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new CustomException(ErrorType.JOB_NOT_FOUND));
@@ -68,6 +75,7 @@ public class JobService {
     private JobStatusResponse toStatusResponse(Job job) {
         return new JobStatusResponse(
                 job.getId(),
+                job.getJobName(),
                 job.getOriginalFilename(),
                 job.getDataType() != null ? job.getDataType().name() : null,
                 job.getStatus().name(),
