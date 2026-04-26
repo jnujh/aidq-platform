@@ -1,5 +1,6 @@
 package com.geomsahaejo.scorecard.infrastructure.mq;
 
+import com.geomsahaejo.scorecard.infrastructure.llm.GeminiService;
 import com.geomsahaejo.scorecard.infrastructure.s3.S3Uploader;
 import com.geomsahaejo.scorecard.job.DataType;
 import com.geomsahaejo.scorecard.job.Job;
@@ -21,6 +22,7 @@ public class DiagnosisResultListener {
     private final JobRepository jobRepository;
     private final JobResultRepository jobResultRepository;
     private final S3Uploader s3Uploader;
+    private final GeminiService geminiService;
 
     @RabbitListener(queues = RabbitMQConfig.RESULT_QUEUE)
     @Transactional
@@ -57,6 +59,20 @@ public class DiagnosisResultListener {
         jobRepository.save(job);
 
         log.info("[MQ] 진단 완료 처리 - jobId: {}, score: {}", job.getId(), message.totalScore());
+
+        // 4) LLM ��포트 자동 생성
+        try {
+            String report = geminiService.generateReport(message.resultDetail(), job.getPurpose());
+            if (report != null) {
+                String reportS3Key = String.format("reports/%d/llm_report.md", job.getId());
+                s3Uploader.uploadJson(reportS3Key, report);
+                result.updateReportS3Key(reportS3Key);
+                jobResultRepository.save(result);
+                log.info("[LLM] 리포트 생성 완료 - jobId: {}", job.getId());
+            }
+        } catch (Exception e) {
+            log.warn("[LLM] ���포트 생성 실패 (진단 결과는 정상 저장됨) - jobId: {}", job.getId(), e);
+        }
     }
 
     private void handleFailure(Job job, DiagnosisResultMessage message) {

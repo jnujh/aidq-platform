@@ -51,4 +51,8 @@ public class JobResult {
         result.resultS3Key = resultS3Key;
         return result;
     }
+
+    public void updateReportS3Key(String reportS3Key) {
+        this.reportS3Key = reportS3Key;
+    }
 }

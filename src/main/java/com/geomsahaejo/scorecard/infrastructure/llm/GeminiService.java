@@ -105,6 +105,64 @@ public class GeminiService {
                 """.formatted(purpose);
     }
 
+    public String generateReport(String diagnosisResultJson, String purpose) {
+        if (apiKey == null || apiKey.isBlank()) {
+            log.warn("[LLM] API 키 미설정 — 리포트 생성 건너뜀");
+            return null;
+        }
+
+        String prompt = buildReportPrompt(diagnosisResultJson, purpose);
+
+        try {
+            String requestBody = objectMapper.writeValueAsString(Map.of(
+                    "model", "llama-3.3-70b-versatile",
+                    "messages", List.of(Map.of("role", "user", "content", prompt)),
+                    "temperature", 0.5
+            ));
+
+            String response = restClient.post()
+                    .uri("/chat/completions")
+                    .header("Content-Type", "application/json")
+                    .header("Authorization", "Bearer " + apiKey)
+                    .body(requestBody)
+                    .retrieve()
+                    .body(String.class);
+
+            JsonNode root = objectMapper.readTree(response);
+            return root.path("choices").get(0)
+                    .path("message").path("content").asText();
+
+        } catch (Exception e) {
+            log.error("[LLM] 리포트 생성 실패", e);
+            return null;
+        }
+    }
+
+    private String buildReportPrompt(String diagnosisResultJson, String purpose) {
+        String purposeSection = (purpose != null && !purpose.isBlank())
+                ? "## 사용자의 데이터 사용 목적\n\"%s\"\n\n".formatted(purpose)
+                : "";
+
+        return """
+                당신은 데이터 품질 진단 전문가입니다.
+                아래 진단 결과를 분석하여 한국어로 리포트를 작성해주세요.
+
+                %s## 진단 결과 JSON
+                %s
+
+                ## 리포트 작성 규칙
+                1. **종합 평가**: 종합 점수와 등급에 대한 전체적인 해석
+                2. **강점 분석**: 점수가 높은 지표(0.9 이상)를 짚어서 왜 좋은지 설명
+                3. **개선 필요 항목**: 점수가 낮은 지표(0.8 미만)를 짚어서 구체적 개선 방법 제시
+                4. **실행 가이드**: 가장 시급한 개선 사항 3가지를 우선순위별로 나열
+                5. 전문 용어를 쓸 때는 괄호 안에 쉬운 설명을 추가해주세요
+                6. 반드시 한국어로만 작성해주세요. 중국어, 일본어, 영어 등 다른 언어를 절대 섞지 마세요.
+                7. "없다", "존재하지 않는다" 등은 반드시 한국어로 표현해주세요.
+                8. Markdown 문법을 사용하지 마세요. 순수 텍스트로만 작성해주세요.
+                9. 제목은 [종합 평가], [강점 분석] 형태로, 목록은 숫자(1. 2. 3.)로 작성해주세요.
+                """.formatted(purposeSection, diagnosisResultJson);
+    }
+
     private WeightRecommendation parseResponse(String response) {
         try {
             JsonNode root = objectMapper.readTree(response);
