@@ -13,6 +13,10 @@ import PurposeInputSection from '../components/landing/PurposeInputSection';
 import ResultPreviewSection from '../components/landing/ResultPreviewSection';
 import BeforeAfterSection from '../components/landing/BeforeAfterSection';
 import AIAssistantSection from '../components/landing/AIAssistantSection';
+import ComparisonSection from '../components/landing/ComparisonSection';
+import TestimonialsSection from '../components/landing/TestimonialsSection';
+import FAQSection from '../components/landing/FAQSection';
+import FinalCTASection from '../components/landing/FinalCTASection';
 
 const { Content } = Layout;
 
@@ -34,6 +38,10 @@ export default function LandingPage() {
         <ResultPreviewSection />
         <BeforeAfterSection />
         <AIAssistantSection />
+        <ComparisonSection />
+        <TestimonialsSection />
+        <FAQSection />
+        <FinalCTASection />
       </Content>
     </Layout>
   );
