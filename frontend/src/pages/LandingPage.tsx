@@ -7,6 +7,12 @@ import PurposeComparisonSection from '../components/landing/PurposeComparisonSec
 import UseCasesSection from '../components/landing/UseCasesSection';
 import SupportedDataSection from '../components/landing/SupportedDataSection';
 import PollutionDetectionSection from '../components/landing/PollutionDetectionSection';
+import HowItWorksSection from '../components/landing/HowItWorksSection';
+import MetricsSection from '../components/landing/MetricsSection';
+import PurposeInputSection from '../components/landing/PurposeInputSection';
+import ResultPreviewSection from '../components/landing/ResultPreviewSection';
+import BeforeAfterSection from '../components/landing/BeforeAfterSection';
+import AIAssistantSection from '../components/landing/AIAssistantSection';
 
 const { Content } = Layout;
 
@@ -22,6 +28,12 @@ export default function LandingPage() {
         <UseCasesSection />
         <SupportedDataSection />
         <PollutionDetectionSection />
+        <HowItWorksSection />
+        <MetricsSection />
+        <PurposeInputSection />
+        <ResultPreviewSection />
+        <BeforeAfterSection />
+        <AIAssistantSection />
       </Content>
     </Layout>
   );
