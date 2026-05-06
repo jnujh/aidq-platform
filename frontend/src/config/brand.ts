@@ -14,6 +14,7 @@ export const BRAND = {
     },
     highlights: {
       success: { bg: '#E1F5EE', text: '#0F5C3E', icon: '#1F9D6B' },
+      warning: { bg: '#FAEEDA', text: '#633806', icon: '#BA7517', border: '#F0D89A' },
     },
   },
   fontSize: {
