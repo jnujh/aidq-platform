@@ -11,6 +11,7 @@ import UploadPage from './pages/UploadPage';
 import JobsPage from './pages/JobsPage';
 import ResultPage from './pages/ResultPage';
 import WeightsPage from './pages/WeightsPage';
+import LandingPage from './pages/LandingPage';
 import { authStore } from './stores/authStore';
 
 const { Sider, Header, Content } = Layout;
@@ -95,12 +96,21 @@ function App() {
 function AppRouter() {
   const location = useLocation();
   const isAuthPage = ['/login', '/signup'].includes(location.pathname);
+  const isLandingPage = location.pathname === '/';
+  const isAuthenticated = authStore.isAuthenticated();
 
   if (isAuthPage) {
     return <AuthLayout />;
   }
 
-  if (!authStore.isAuthenticated()) {
+  if (isLandingPage) {
+    if (isAuthenticated) {
+      return <Navigate to="/jobs" replace />;
+    }
+    return <LandingPage />;
+  }
+
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
