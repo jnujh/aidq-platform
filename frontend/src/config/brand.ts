@@ -4,6 +4,17 @@ export const BRAND = {
   colors: {
     primary: '#185FA5',
     primaryDark: '#042C53',
+    surfaces: {
+      subtle: '#F7FAFE',
+      cardBlue: '#F0F7FF',
+    },
+    badges: {
+      purposeA: { bg: '#E6F1FB', text: '#0C447C' },
+      purposeB: { bg: '#FAEEDA', text: '#633806' },
+    },
+    highlights: {
+      success: { bg: '#E1F5EE', text: '#0F5C3E', icon: '#1F9D6B' },
+    },
   },
   fontSize: {
     bodySmall: 14,
