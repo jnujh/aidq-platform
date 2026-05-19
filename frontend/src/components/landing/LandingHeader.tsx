@@ -1,5 +1,8 @@
+import { useState } from 'react';
 import { Layout, Menu, Button, Typography, Flex } from 'antd';
+import { useNavigate } from 'react-router-dom';
 import { BRAND } from '../../config/brand';
+import { authStore } from '../../stores/authStore';
 
 const { Header } = Layout;
 const { Text } = Typography;
@@ -12,6 +15,22 @@ const menuItems = [
 ];
 
 export default function LandingHeader() {
+  const navigate = useNavigate();
+  const [isAuthenticated, setIsAuthenticated] = useState(() =>
+    authStore.isAuthenticated()
+  );
+
+  const handleLogout = () => {
+    authStore.removeToken();
+    setIsAuthenticated(false);
+  };
+
+  const handleMenuClick = ({ key }: { key: string }) => {
+    document
+      .getElementById(key)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   return (
     <Header
       style={{
@@ -32,7 +51,12 @@ export default function LandingHeader() {
         justify="space-between"
         style={{ width: '100%', maxWidth: 1280, margin: '0 auto' }}
       >
-        <Flex align="center" gap={10}>
+        <Flex
+          align="center"
+          gap={10}
+          onClick={() => navigate('/')}
+          style={{ cursor: 'pointer' }}
+        >
           <div
             style={{
               width: 32,
@@ -56,6 +80,7 @@ export default function LandingHeader() {
           mode="horizontal"
           items={menuItems}
           selectable={false}
+          onClick={handleMenuClick}
           style={{
             border: 'none',
             background: 'transparent',
@@ -68,30 +93,65 @@ export default function LandingHeader() {
         />
 
         <Flex align="center" gap={20}>
-          <Text
-            style={{
-              fontSize: BRAND.fontSize.body,
-              fontWeight: BRAND.fontWeight.semibold,
-              cursor: 'pointer',
-              color: '#333',
-            }}
-          >
-            로그인
-          </Text>
-          <Button
-            type="primary"
-            style={{
-              background: BRAND.colors.primary,
-              borderColor: BRAND.colors.primary,
-              fontWeight: BRAND.fontWeight.semibold,
-              fontSize: BRAND.fontSize.body,
-              height: 42,
-              paddingInline: 22,
-              borderRadius: 8,
-            }}
-          >
-            시작하기
-          </Button>
+          {isAuthenticated ? (
+            <>
+              <Button
+                type="primary"
+                onClick={() => navigate('/jobs')}
+                style={{
+                  background: BRAND.colors.primary,
+                  borderColor: BRAND.colors.primary,
+                  fontWeight: BRAND.fontWeight.semibold,
+                  fontSize: BRAND.fontSize.body,
+                  height: 42,
+                  paddingInline: 22,
+                  borderRadius: 8,
+                }}
+              >
+                내 작업으로
+              </Button>
+              <Text
+                onClick={handleLogout}
+                style={{
+                  fontSize: BRAND.fontSize.body,
+                  fontWeight: BRAND.fontWeight.semibold,
+                  cursor: 'pointer',
+                  color: '#333',
+                }}
+              >
+                로그아웃
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text
+                onClick={() => navigate('/login')}
+                style={{
+                  fontSize: BRAND.fontSize.body,
+                  fontWeight: BRAND.fontWeight.semibold,
+                  cursor: 'pointer',
+                  color: '#333',
+                }}
+              >
+                로그인
+              </Text>
+              <Button
+                type="primary"
+                onClick={() => navigate('/signup')}
+                style={{
+                  background: BRAND.colors.primary,
+                  borderColor: BRAND.colors.primary,
+                  fontWeight: BRAND.fontWeight.semibold,
+                  fontSize: BRAND.fontSize.body,
+                  height: 42,
+                  paddingInline: 22,
+                  borderRadius: 8,
+                }}
+              >
+                시작하기
+              </Button>
+            </>
+          )}
         </Flex>
       </Flex>
     </Header>

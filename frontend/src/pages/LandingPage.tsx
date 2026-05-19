@@ -28,18 +28,26 @@ export default function LandingPage() {
         <HeroSection />
         <PartnersSection />
         <ResearchBackedSection />
-        <PurposeComparisonSection />
+        <div id="service" style={{ scrollMarginTop: 80 }}>
+          <PurposeComparisonSection />
+        </div>
         <UseCasesSection />
         <SupportedDataSection />
         <PollutionDetectionSection />
-        <HowItWorksSection />
-        <MetricsSection />
+        <div id="guide" style={{ scrollMarginTop: 80 }}>
+          <HowItWorksSection />
+        </div>
+        <div id="metrics" style={{ scrollMarginTop: 80 }}>
+          <MetricsSection />
+        </div>
         <PurposeInputSection />
         <ResultPreviewSection />
         <BeforeAfterSection />
         <AIAssistantSection />
         <ComparisonSection />
-        <TestimonialsSection />
+        <div id="cases" style={{ scrollMarginTop: 80 }}>
+          <TestimonialsSection />
+        </div>
         <FAQSection />
         <FinalCTASection />
       </Content>

@@ -104,9 +104,6 @@ function AppRouter() {
   }
 
   if (isLandingPage) {
-    if (isAuthenticated) {
-      return <Navigate to="/jobs" replace />;
-    }
     return <LandingPage />;
   }
 

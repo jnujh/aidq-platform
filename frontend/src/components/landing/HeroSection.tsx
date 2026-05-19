@@ -1,4 +1,5 @@
 import { Button, Flex } from 'antd';
+import { useNavigate } from 'react-router-dom';
 import { BRAND } from '../../config/brand';
 
 const stats = [
@@ -8,6 +9,8 @@ const stats = [
 ];
 
 export default function HeroSection() {
+  const navigate = useNavigate();
+
   return (
     <section style={{ padding: '80px 48px', background: '#fff' }}>
       <Flex
@@ -66,6 +69,7 @@ export default function HeroSection() {
           <Flex gap={12} style={{ marginBottom: 56 }}>
             <Button
               type="primary"
+              onClick={() => navigate('/signup')}
               style={{
                 background: BRAND.colors.primary,
                 borderColor: BRAND.colors.primary,
