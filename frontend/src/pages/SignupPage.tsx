@@ -3,6 +3,7 @@ import { MailOutlined, LockOutlined, UserOutlined } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
 import { authApi } from '../api/auth';
 import { useState } from 'react';
+import { getErrorMessage } from '../utils/errorHandler';
 
 const { Title, Text } = Typography;
 
@@ -16,9 +17,8 @@ export default function SignupPage() {
       await authApi.signup(values);
       message.success('회원가입 성공! 로그인해주세요.');
       navigate('/login');
-    } catch (err: any) {
-      const msg = err.response?.data?.error?.message || '회원가입에 실패했습니다.';
-      message.error(msg);
+    } catch (err) {
+      message.error(getErrorMessage(err, '회원가입에 실패했습니다.'));
     } finally {
       setLoading(false);
     }

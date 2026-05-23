@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Descriptions, Spin, Result, Button, Typography, Card, Divider } from 'antd';
 import { FileTextOutlined } from '@ant-design/icons';
 import { resultsApi, type JobResultResponse } from '../api/results';
+import { getErrorCode, getErrorMessage } from '../utils/errorHandler';
 
 const { Title, Paragraph } = Typography;
 
@@ -29,14 +30,14 @@ export default function ResultPage() {
             // 리포트 없어도 결과는 표시
           }
         }
-      } catch (err: any) {
-        const code = err.response?.data?.error?.code;
+      } catch (err) {
+        const code = getErrorCode(err);
         if (code === 'JOB_NOT_COMPLETED') {
           setError('진단이 아직 진행 중입니다. 잠시 후 다시 확인해주세요.');
         } else if (code === 'JOB_NOT_FOUND') {
           setError('존재하지 않는 작업입니다.');
         } else {
-          setError(err.response?.data?.error?.message || '결과를 불러오는데 실패했습니다.');
+          setError(getErrorMessage(err, '결과를 불러오는데 실패했습니다.'));
         }
       } finally {
         setLoading(false);

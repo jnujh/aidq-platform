@@ -3,6 +3,7 @@ import { Upload, Button, message, Typography, Input, Form } from 'antd';
 import { InboxOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { jobsApi } from '../api/jobs';
+import { getErrorMessage } from '../utils/errorHandler';
 import type { UploadFile } from 'antd';
 
 const { Dragger } = Upload;
@@ -40,9 +41,8 @@ export default function UploadPage() {
         await jobsApi.submit(file.originFileObj, jobName || undefined);
         message.success('파일 업로드 성공! 진단이 시작됩니다.');
         navigate('/jobs');
-      } catch (err: any) {
-        const msg = err.response?.data?.error?.message || '파일 업로드에 실패했습니다.';
-        message.error(msg);
+      } catch (err) {
+        message.error(getErrorMessage(err, '파일 업로드에 실패했습니다.'));
       } finally {
         setLoading(false);
       }

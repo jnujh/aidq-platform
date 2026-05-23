@@ -4,6 +4,7 @@ import { Card, Slider, Button, Typography, Alert, Spin, Divider, message } from 
 import { ExperimentOutlined } from '@ant-design/icons';
 import { weightsApi } from '../api/weights';
 import { jobsApi } from '../api/jobs';
+import { getErrorMessage } from '../utils/errorHandler';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -49,23 +50,22 @@ export default function WeightsPage() {
     }
 
     if (uploadState.purpose) {
+      const fetchRecommendation = async (purpose: string) => {
+        setRecommending(true);
+        try {
+          const res = await weightsApi.recommend(purpose);
+          setWeights(res.data.data.weights);
+          setReasoning(res.data.data.reasoning);
+          setRecommended(true);
+        } catch {
+          message.warning('가중치 추천에 실패했습니다. 기본 가중치를 사용합니다.');
+        } finally {
+          setRecommending(false);
+        }
+      };
       fetchRecommendation(uploadState.purpose);
     }
-  }, []);
-
-  const fetchRecommendation = async (purpose: string) => {
-    setRecommending(true);
-    try {
-      const res = await weightsApi.recommend(purpose);
-      setWeights(res.data.data.weights);
-      setReasoning(res.data.data.reasoning);
-      setRecommended(true);
-    } catch {
-      message.warning('가중치 추천에 실패했습니다. 기본 가중치를 사용합니다.');
-    } finally {
-      setRecommending(false);
-    }
-  };
+  }, [uploadState, navigate]);
 
   const handleSliderChange = (metric: string, value: number) => {
     setWeights(prev => ({ ...prev, [metric]: value / 100 }));
@@ -78,9 +78,8 @@ export default function WeightsPage() {
       await jobsApi.submit(uploadState.file, uploadState.jobName, uploadState.purpose, useWeights);
       message.success('맞춤 가중치로 진단이 시작되었습니다.');
       navigate('/jobs');
-    } catch (err: any) {
-      const msg = err.response?.data?.error?.message || '업로드에 실패했습니다.';
-      message.error(msg);
+    } catch (err) {
+      message.error(getErrorMessage(err, '업로드에 실패했습니다.'));
     } finally {
       setLoading(false);
     }

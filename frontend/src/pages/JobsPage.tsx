@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { Table, Tag, Typography, Empty, Button, Popconfirm, message } from 'antd';
 import { DeleteOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
@@ -19,7 +19,7 @@ export default function JobsPage() {
   const [loading, setLoading] = useState(true);
   const intervalRef = useRef<number | null>(null);
 
-  const fetchJobs = async () => {
+  const fetchJobs = useCallback(async () => {
     try {
       const res = await jobsApi.getList();
       setJobs(res.data.data);
@@ -28,7 +28,7 @@ export default function JobsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const handleDelete = async (jobId: number, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -42,7 +42,17 @@ export default function JobsPage() {
   };
 
   useEffect(() => {
-    fetchJobs();
+    const loadJobs = async () => {
+      try {
+        const res = await jobsApi.getList();
+        setJobs(res.data.data);
+      } catch {
+        // 에러 무시
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadJobs();
   }, []);
 
   useEffect(() => {
@@ -60,7 +70,7 @@ export default function JobsPage() {
         intervalRef.current = null;
       }
     };
-  }, [jobs]);
+  }, [jobs, fetchJobs]);
 
   const columns = [
     {
