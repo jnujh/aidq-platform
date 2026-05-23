@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Layout } from 'antd';
 import LandingHeader from '../components/landing/LandingHeader';
 import HeroSection from '../components/landing/HeroSection';
@@ -20,36 +21,45 @@ import FinalCTASection from '../components/landing/FinalCTASection';
 
 const { Content } = Layout;
 
+function SectionFrame({ id, children }: { id?: string; children: ReactNode }) {
+  return (
+    <div
+      id={id}
+      style={{
+        minHeight: 'calc(100vh - 72px)',
+        scrollMarginTop: 80,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 export default function LandingPage() {
   return (
     <Layout style={{ minHeight: '100vh', background: '#fff' }}>
       <LandingHeader />
       <Content>
-        <HeroSection />
-        <PartnersSection />
-        <ResearchBackedSection />
-        <div id="service" style={{ scrollMarginTop: 80 }}>
-          <PurposeComparisonSection />
-        </div>
-        <UseCasesSection />
-        <SupportedDataSection />
-        <PollutionDetectionSection />
-        <div id="guide" style={{ scrollMarginTop: 80 }}>
-          <HowItWorksSection />
-        </div>
-        <div id="metrics" style={{ scrollMarginTop: 80 }}>
-          <MetricsSection />
-        </div>
-        <PurposeInputSection />
-        <ResultPreviewSection />
-        <BeforeAfterSection />
-        <AIAssistantSection />
-        <ComparisonSection />
-        <div id="cases" style={{ scrollMarginTop: 80 }}>
-          <TestimonialsSection />
-        </div>
-        <FAQSection />
-        <FinalCTASection />
+        <SectionFrame><HeroSection /></SectionFrame>
+        <SectionFrame><PartnersSection /></SectionFrame>
+        <SectionFrame><ResearchBackedSection /></SectionFrame>
+        <SectionFrame id="service"><PurposeComparisonSection /></SectionFrame>
+        <SectionFrame><UseCasesSection /></SectionFrame>
+        <SectionFrame><SupportedDataSection /></SectionFrame>
+        <SectionFrame><PollutionDetectionSection /></SectionFrame>
+        <SectionFrame id="guide"><HowItWorksSection /></SectionFrame>
+        <SectionFrame id="metrics"><MetricsSection /></SectionFrame>
+        <SectionFrame><PurposeInputSection /></SectionFrame>
+        <SectionFrame><ResultPreviewSection /></SectionFrame>
+        <SectionFrame><BeforeAfterSection /></SectionFrame>
+        <SectionFrame><AIAssistantSection /></SectionFrame>
+        <SectionFrame><ComparisonSection /></SectionFrame>
+        <SectionFrame id="cases"><TestimonialsSection /></SectionFrame>
+        <SectionFrame><FAQSection /></SectionFrame>
+        <SectionFrame><FinalCTASection /></SectionFrame>
       </Content>
     </Layout>
   );
