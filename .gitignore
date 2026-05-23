@@ -75,3 +75,5 @@ dist/
 # AI 설정 (개인용)
 # ========================
 CLAUDE.md
+docs/
+.githooks/
