@@ -45,6 +45,18 @@ services:
       - "./infra/localstack/init-s3.sh:/etc/localstack/init/ready.d/init-s3.sh"
     restart: always
 
+  # ───── RAG Service (FastAPI) ─────
+  rag:
+    container_name: scorecard-rag
+    build:
+      context: ./rag-service
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8000"
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    restart: always
+
   # ───── DSC 진단 엔진 (Python Worker) ─────
   engine:
     container_name: scorecard-engine
