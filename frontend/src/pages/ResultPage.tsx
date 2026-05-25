@@ -4,6 +4,7 @@ import { Descriptions, Spin, Result, Button, Typography, Card, Divider } from 'a
 import { FileTextOutlined } from '@ant-design/icons';
 import { resultsApi, type JobResultResponse } from '../api/results';
 import { getErrorCode, getErrorMessage } from '../utils/errorHandler';
+import Markdown from 'react-markdown';
 
 const { Title, Paragraph } = Typography;
 
@@ -89,16 +90,12 @@ export default function ResultPage() {
             title={<><FileTextOutlined /> LLM 분석 리포트</>}
             style={{ marginTop: 24 }}
           >
-            <pre style={{
+            <div style={{
               lineHeight: 1.8,
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-              fontFamily: 'inherit',
               fontSize: '14px',
-              margin: 0,
             }}>
-              {report}
-            </pre>
+              <Markdown>{report}</Markdown>
+            </div>
           </Card>
         </>
       )}

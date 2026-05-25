@@ -74,17 +74,16 @@ Based on the diagnosis results and reference documents, write a detailed improve
 
 ## Writing Rules
 1. Write entirely in Korean (한국어). Do NOT mix Chinese, Japanese, or other languages.
-2. Do NOT use Markdown syntax. Write in plain text only.
-3. Use [제목] format for headings, numbered lists (1. 2. 3.) for items.
-4. Be specific — reference actual techniques and examples from the reference documents.
-5. Structure your report as:
-   - [종합 평가]: Overall score interpretation
-   - [강점 분석]: Metrics scoring 0.9+ and why they're good
-   - [개선 필요 항목]: Metrics scoring below 0.8, with SPECIFIC fix recommendations from the reference documents
-   - [실행 가이드]: Top 3 most urgent improvements, prioritized, with concrete steps
-6. When mentioning technical terms, add simple explanations in parentheses.
-7. Base ALL recommendations on the reference documents provided. Do not hallucinate techniques or facts not in the documents.
-8. When citing a reference document, use its FULL NAME (e.g., "Kaggle Telco Customer Churn 분석에 따르면..."), NOT document numbers.
+2. Use Markdown formatting for readability: **bold** for key terms, ## for section headings, numbered lists for items.
+3. Be specific — reference actual techniques and examples from the reference documents.
+4. Structure your report as:
+   - ## 종합 평가: Overall score interpretation
+   - ## 강점 분석: Metrics scoring 0.9+ and why they're good
+   - ## 개선 필요 항목: Metrics scoring below 0.8, with SPECIFIC fix recommendations from the reference documents
+   - ## 실행 가이드: Top 3 most urgent improvements, prioritized, with concrete steps
+5. When mentioning technical terms, add simple explanations in parentheses.
+6. Base ALL recommendations on the reference documents provided. Do not hallucinate techniques or facts not in the documents.
+7. When citing a reference document, use its FULL NAME (e.g., "Kaggle Telco Customer Churn 분석에 따르면..."), NOT document numbers.
 
 Write the report:
 """

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Card, Slider, Button, Typography, Alert, Spin, Divider, message } from 'antd';
+import { Card, Slider, Button, Typography, Spin, Divider, message } from 'antd';
 import { ExperimentOutlined } from '@ant-design/icons';
+import Markdown from 'react-markdown';
 import { weightsApi } from '../api/weights';
 import { jobsApi } from '../api/jobs';
 import { getErrorMessage } from '../utils/errorHandler';
@@ -103,13 +104,14 @@ export default function WeightsPage() {
       ) : (
         <>
           {recommended && reasoning && (
-            <Alert
-              type="info"
-              showIcon
-              message="LLM 추천 이유"
-              description={reasoning}
-              style={{ marginBottom: 24 }}
-            />
+            <Card
+              title="LLM 추천 이유"
+              style={{ marginBottom: 24, background: '#f0f5ff', border: '1px solid #adc6ff' }}
+            >
+              <div style={{ lineHeight: 1.8, fontSize: '14px' }}>
+                <Markdown>{reasoning}</Markdown>
+              </div>
+            </Card>
           )}
 
           <Card>
