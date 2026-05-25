@@ -4,6 +4,7 @@ import com.geomsahaejo.scorecard.global.exception.CustomException;
 import com.geomsahaejo.scorecard.global.exception.ErrorType;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import tools.jackson.databind.JsonNode;
@@ -18,15 +19,20 @@ public class LlmService {
 
     private final RestClient ragClient;
     private final ObjectMapper objectMapper;
-    private final String ragServiceUrl;
 
     public LlmService(
             @Value("${rag.service-url:http://localhost:8001}") String ragServiceUrl,
             ObjectMapper objectMapper) {
-        this.ragServiceUrl = ragServiceUrl;
         this.objectMapper = objectMapper;
+
+        // RAG 서비스는 Claude API 호출로 10~30초 걸릴 수 있으므로 타임아웃 여유 설정
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(5000);   // 연결 타임아웃 5초
+        factory.setReadTimeout(60000);     // 응답 대기 타임아웃 60초
+
         this.ragClient = RestClient.builder()
                 .baseUrl(ragServiceUrl)
+                .requestFactory(factory)
                 .build();
     }
 
