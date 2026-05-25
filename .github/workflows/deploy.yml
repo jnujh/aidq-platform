@@ -52,11 +52,14 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          command_timeout: 20m
           script: |
             cd aidq-platform
             git pull origin main
+            # .env.prod에서 LLM_API_KEY → ANTHROPIC_API_KEY 마이그레이션 (1회성)
+            sed -i 's/^LLM_API_KEY/ANTHROPIC_API_KEY/' .env.prod
             docker-compose -f docker-compose.prod.yml --env-file .env.prod down
             docker-compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
             echo "RAG 인덱싱 대기 중..."
-            sleep 10
+            sleep 15
             docker exec scorecard-rag python scripts/index_documents.py || echo "RAG 인덱싱 실패 (서비스는 계속 동작)"
