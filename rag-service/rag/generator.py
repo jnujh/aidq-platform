@@ -88,6 +88,20 @@ Write the report:
 """
 
 
+def _strip_code_block(text: str) -> str:
+    """Claude가 ```json ... ``` 으로 감싸는 경우 벗겨냄"""
+    text = text.strip()
+    if text.startswith("```"):
+        lines = text.split("\n")
+        # 첫 줄(```json 또는 ```)과 마지막 줄(```) 제거
+        if lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        text = "\n".join(lines).strip()
+    return text
+
+
 def _build_context(search_results: list[dict]) -> str:
     """검색 결과를 프롬프트용 컨텍스트 문자열로 변환"""
     context_parts = []
@@ -126,11 +140,11 @@ def generate_weights(purpose: str, search_results: list[dict]) -> dict:
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     response = client.messages.create(
         model="claude-haiku-4-5-20251001",
-        max_tokens=1000,
+        max_tokens=2000,
         messages=[{"role": "user", "content": prompt}],
     )
 
-    response_text = response.content[0].text.strip()
+    response_text = _strip_code_block(response.content[0].text.strip())
 
     try:
         result = json.loads(response_text)
