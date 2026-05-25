@@ -1,6 +1,6 @@
 package com.geomsahaejo.scorecard.infrastructure.mq;
 
-import com.geomsahaejo.scorecard.infrastructure.llm.GeminiService;
+import com.geomsahaejo.scorecard.infrastructure.llm.LlmService;
 import com.geomsahaejo.scorecard.infrastructure.s3.S3Uploader;
 import com.geomsahaejo.scorecard.job.DataType;
 import com.geomsahaejo.scorecard.job.Job;
@@ -22,7 +22,7 @@ public class DiagnosisResultListener {
     private final JobRepository jobRepository;
     private final JobResultRepository jobResultRepository;
     private final S3Uploader s3Uploader;
-    private final GeminiService geminiService;
+    private final LlmService llmService;
 
     @RabbitListener(queues = RabbitMQConfig.RESULT_QUEUE)
     @Transactional
@@ -62,7 +62,7 @@ public class DiagnosisResultListener {
 
         // 4) LLM ��포트 자동 생성
         try {
-            String report = geminiService.generateReport(message.resultDetail(), job.getPurpose());
+            String report = llmService.generateReport(message.resultDetail(), job.getPurpose());
             if (report != null) {
                 String reportS3Key = String.format("reports/%d/llm_report.md", job.getId());
                 s3Uploader.uploadJson(reportS3Key, report);

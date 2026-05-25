@@ -9,11 +9,11 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class WeightController {
 
-    private final GeminiService geminiService;
+    private final LlmService llmService;
 
     @PostMapping("/recommend")
     public ApiResponse<WeightRecommendation> recommend(@RequestBody WeightRequest request) {
-        WeightRecommendation recommendation = geminiService.recommendWeights(request.purpose());
+        WeightRecommendation recommendation = llmService.recommendWeights(request.purpose());
         return ApiResponse.success(recommendation);
     }
 
