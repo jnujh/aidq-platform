@@ -50,12 +50,22 @@ services:
       AWS_S3_ENDPOINT: ""
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
-      LLM_API_KEY: ${LLM_API_KEY}
+      RAG_SERVICE_URL: http://rag:8000
     depends_on:
       mysql:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+    restart: always
+
+  # ───── RAG Service (FastAPI) ─────
+  rag:
+    container_name: scorecard-rag
+    build:
+      context: ./rag-service
+      dockerfile: Dockerfile
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
     restart: always
 
   # ───── DSC 진단 엔진 (Python Worker) ─────
