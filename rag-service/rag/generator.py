@@ -33,6 +33,7 @@ Our platform has exactly 8 quality metrics. You must recommend weights for these
 4. Base your reasoning on the reference documents provided below
 5. Write your reasoning in Korean (한국어)
 6. Be specific — mention actual examples from the reference documents, not generic advice
+7. When citing a reference document, use its FULL NAME (e.g., "Kaggle Telco Customer Churn 데이터셋 분석에 따르면..."), NOT document numbers
 
 ## Reference Documents (from RAG search)
 {context}
@@ -83,6 +84,7 @@ Based on the diagnosis results and reference documents, write a detailed improve
    - [실행 가이드]: Top 3 most urgent improvements, prioritized, with concrete steps
 6. When mentioning technical terms, add simple explanations in parentheses.
 7. Base ALL recommendations on the reference documents provided. Do not hallucinate techniques or facts not in the documents.
+8. When citing a reference document, use its FULL NAME (e.g., "Kaggle Telco Customer Churn 분석에 따르면..."), NOT document numbers.
 
 Write the report:
 """
@@ -102,6 +104,45 @@ def _strip_code_block(text: str) -> str:
     return text
 
 
+# 파일명 → 사람이 읽을 수 있는 출처명 매핑
+_SOURCE_DISPLAY_NAMES = {
+    "01_telco_customer_churn": "Kaggle Telco Customer Churn 데이터셋 분석",
+    "02_credit_card_fraud": "Kaggle Credit Card Fraud Detection 데이터셋 분석",
+    "03_bank_marketing": "Kaggle Bank Marketing 데이터셋 분석",
+    "04_santander_customer_satisfaction": "Kaggle Santander Customer Satisfaction 데이터셋 분석",
+    "05_employee_attrition": "Kaggle IBM HR Employee Attrition 데이터셋 분석",
+    "06_titanic": "Kaggle Titanic 데이터셋 분석",
+    "07_forest_cover_type": "Kaggle Forest Cover Type 데이터셋 분석",
+    "08_otto_group_product": "Kaggle Otto Group Product Classification 데이터셋 분석",
+    "09_house_prices": "Kaggle House Prices 데이터셋 분석",
+    "10_medical_cost": "Kaggle Medical Cost 데이터셋 분석",
+    "11_bike_sharing_demand": "Kaggle Bike Sharing Demand 데이터셋 분석",
+    "12_rossmann_store_sales": "Kaggle Rossmann Store Sales 데이터셋 분석",
+    "13_store_item_demand": "Kaggle Store Item Demand 데이터셋 분석",
+    "14_web_traffic_time_series": "Kaggle Web Traffic Time Series 데이터셋 분석",
+    "15_online_retail": "Kaggle Online Retail 데이터셋 분석",
+    "16_mall_customer_segmentation": "Kaggle Mall Customer Segmentation 데이터셋 분석",
+    "17_movielens": "Kaggle MovieLens 데이터셋 분석",
+    "18_sentiment_analysis": "Kaggle Sentiment Analysis 데이터셋 분석",
+    "19_spam_detection": "Kaggle SMS Spam Detection 데이터셋 분석",
+    "20_ieee_cis_fraud": "Kaggle IEEE-CIS Fraud Detection 데이터셋 분석",
+    "21_network_intrusion": "Kaggle KDD Cup 99 Network Intrusion 데이터셋 분석",
+    "01_missing_value_handling": "scikit-learn 결측치 처리 기법 가이드",
+    "02_outlier_detection_treatment": "scikit-learn 이상치 탐지/처리 가이드",
+    "03_class_imbalance_solutions": "imbalanced-learn 클래스 불균형 해결 가이드",
+    "04_feature_scaling": "scikit-learn 피처 스케일링 가이드",
+    "05_duplicate_detection": "pandas 중복 데이터 탐지 가이드",
+    "06_data_type_validation": "scikit-learn 데이터 타입/인코딩 가이드",
+    "07_consistency_standardization": "pandas 일관성 표준화 가이드",
+    "08_feature_correlation_management": "scikit-learn 피처 상관관계 관리 가이드",
+    "01_iso_25012_quality_dimensions": "ISO/IEC 25012 데이터 품질 차원 정의",
+    "02_ai_ml_data_quality": "AI/ML 데이터 품질 요구사항 (ISO 5259 기반)",
+    "03_google_rules_of_ml": "Google Rules of Machine Learning",
+    "04_task_specific_requirements": "ML 태스크별 데이터 품질 요구사항",
+    "05_quality_impact_on_performance": "데이터 품질이 모델 성능에 미치는 영향",
+}
+
+
 def _build_context(search_results: list[dict]) -> str:
     """검색 결과를 프롬프트용 컨텍스트 문자열로 변환"""
     context_parts = []
@@ -110,7 +151,9 @@ def _build_context(search_results: list[dict]) -> str:
         section = result["metadata"].get("section", "")
         subsection = result["metadata"].get("subsection", "")
 
-        location = " > ".join(filter(None, [source, section, subsection]))
+        # 사람이 읽을 수 있는 출처명 사용
+        display_name = _SOURCE_DISPLAY_NAMES.get(source, source)
+        location = " > ".join(filter(None, [display_name, section, subsection]))
         context_parts.append(
             f"[Document {i}] ({location})\n{result['content']}"
         )
