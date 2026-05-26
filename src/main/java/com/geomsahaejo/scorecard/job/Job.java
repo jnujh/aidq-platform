@@ -37,6 +37,14 @@ public class Job {
     @Column(nullable = false, length = 20)
     private JobStatus status;
 
+    // 재진단(retry)인 경우 부모 Job 의 id. 1차 진단이면 null.
+    @Column
+    private Long parentJobId;
+
+    // 진단 요청 시점의 가중치 스냅샷 (JSON). 재진단 시 부모로부터 동일하게 복사.
+    @Column(length = 2000)
+    private String weightsJson;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -55,13 +63,29 @@ public class Job {
     }
 
     public static Job create(Long userId, String jobName, String originalFilename,
-                             String purpose, String s3Key) {
+                             String purpose, String s3Key, String weightsJson) {
         Job job = new Job();
         job.userId = userId;
         job.jobName = jobName;
         job.originalFilename = originalFilename;
         job.purpose = purpose;
         job.s3Key = s3Key;
+        job.weightsJson = weightsJson;
+        job.status = JobStatus.PENDING;
+        return job;
+    }
+
+    public static Job createRetry(Job parent, Long userId, String jobName,
+                                  String originalFilename, String s3Key) {
+        Job job = new Job();
+        job.userId = userId;
+        job.jobName = jobName;
+        job.originalFilename = originalFilename;
+        // weights/purpose 는 부모에서 그대로 승계 (재진단 의미상 동일 조건 유지)
+        job.purpose = parent.purpose;
+        job.weightsJson = parent.weightsJson;
+        job.s3Key = s3Key;
+        job.parentJobId = parent.getId();
         job.status = JobStatus.PENDING;
         return job;
     }

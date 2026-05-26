@@ -31,7 +31,7 @@ class ResultServiceTest {
     @InjectMocks ResultService resultService;
 
     private Job createDoneJob(Long id, Long userId) {
-        Job job = Job.create(userId, "테스트작업", "data.csv", "ML 학습용", "s3://key");
+        Job job = Job.create(userId, "테스트작업", "data.csv", "ML 학습용", "s3://key", null);
         ReflectionTestUtils.setField(job, "id", id);
         job.updateStatus(JobStatus.DONE);
         return job;
@@ -86,7 +86,7 @@ class ResultServiceTest {
     @Test
     @DisplayName("결과 조회 실패 - 진단 미완료")
     void getResult_jobNotCompleted() {
-        Job job = Job.create(1L, "테스트작업", "data.csv", "ML 학습용", "s3://key");
+        Job job = Job.create(1L, "테스트작업", "data.csv", "ML 학습용", "s3://key", null);
         ReflectionTestUtils.setField(job, "id", 1L);
         // status = PENDING (기본값)
 

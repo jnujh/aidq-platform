@@ -18,7 +18,7 @@ export default function LoginPage() {
       const res = await authApi.login(values);
       authStore.setToken(res.data.data.accessToken);
       message.success('로그인 성공');
-      navigate('/jobs');
+      navigate('/');
     } catch (err) {
       message.error(getErrorMessage(err, '로그인에 실패했습니다.'));
     } finally {

@@ -10,7 +10,9 @@ import SignupPage from './pages/SignupPage';
 import UploadPage from './pages/UploadPage';
 import JobsPage from './pages/JobsPage';
 import ResultPage from './pages/ResultPage';
+import RetryPage from './pages/RetryPage';
 import WeightsPage from './pages/WeightsPage';
+import LandingPage from './pages/LandingPage';
 import { authStore } from './stores/authStore';
 
 const { Sider, Header, Content } = Layout;
@@ -41,6 +43,7 @@ function DashboardLayout() {
     if (location.pathname === '/jobs') return '내 작업 목록';
     if (location.pathname === '/jobs/upload') return '파일 업로드';
     if (location.pathname === '/jobs/weights') return '가중치 설정';
+    if (location.pathname.endsWith('/retry')) return '진단 재시도';
     if (location.pathname.startsWith('/results')) return '진단 결과';
     return '';
   };
@@ -75,6 +78,7 @@ function DashboardLayout() {
             <Route path="/jobs" element={<JobsPage />} />
             <Route path="/jobs/upload" element={<UploadPage />} />
             <Route path="/jobs/weights" element={<WeightsPage />} />
+            <Route path="/jobs/:parentJobId/retry" element={<RetryPage />} />
             <Route path="/results/:jobId" element={<ResultPage />} />
             <Route path="*" element={<Navigate to="/jobs" replace />} />
           </Routes>
@@ -95,12 +99,18 @@ function App() {
 function AppRouter() {
   const location = useLocation();
   const isAuthPage = ['/login', '/signup'].includes(location.pathname);
+  const isLandingPage = location.pathname === '/';
+  const isAuthenticated = authStore.isAuthenticated();
 
   if (isAuthPage) {
     return <AuthLayout />;
   }
 
-  if (!authStore.isAuthenticated()) {
+  if (isLandingPage) {
+    return <LandingPage />;
+  }
+
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 

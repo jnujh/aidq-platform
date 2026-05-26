@@ -37,7 +37,7 @@ class JobServiceTest {
     @InjectMocks JobService jobService;
 
     private Job createJob(Long id, Long userId) {
-        Job job = Job.create(userId, "테스트작업", "data.csv", "ML 학습용", "s3://key");
+        Job job = Job.create(userId, "테스트작업", "data.csv", "ML 학습용", "s3://key", null);
         ReflectionTestUtils.setField(job, "id", id);
         return job;
     }

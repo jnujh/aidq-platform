@@ -13,6 +13,18 @@ export interface JobStatusResponse {
   status: string;
   createdAt: string;
   updatedAt: string;
+  // 재진단(자식 Job) 인 경우 부모 Job 의 id. 1차 진단이면 null.
+  parentJobId: number | null;
+  // 사용자가 입력한 사용 목적.
+  purpose: string | null;
+  // 진단 요청 시점의 가중치 스냅샷.
+  weights: Record<string, number> | null;
+}
+
+export interface JobRetryResponse {
+  jobId: number;
+  parentJobId: number;
+  status: string;
 }
 
 export const jobsApi = {
@@ -35,5 +47,15 @@ export const jobsApi = {
 
   delete(jobId: number) {
     return client.delete<{ success: boolean }>(`/api/jobs/${jobId}`);
+  },
+
+  retryJob(parentJobId: number, file: File, jobName?: string) {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (jobName) formData.append('jobName', jobName);
+    return client.post<{ success: boolean; data: JobRetryResponse }>(
+      `/api/jobs/${parentJobId}/retry`,
+      formData
+    );
   },
 };
