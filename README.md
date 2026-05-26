@@ -1,27 +1,29 @@
 # Scorecard — AI-Ready 데이터 품질 진단 플랫폼
 
-데이터셋을 업로드하면, 품질을 자동 진단하고 LLM이 개선 가이드를 생성하는 플랫폼입니다.
+데이터셋을 업로드하면, 품질을 자동 진단하고 RAG 기반 LLM이 개선 가이드를 생성하는 플랫폼입니다.
 
 ## 핵심 기능
 
 - **파일 업로드** — CSV 파일을 드래그앤드롭으로 업로드
+- **RAG 기반 맞춤 가중치 추천** — 사용 목적에 따라 ChromaDB 검색 + Claude Haiku가 평가지표 가중치를 추천
 - **자동 진단** — 8개 품질 지표(completeness, uniqueness, validity 등)로 종합 점수 산출
-- **맞춤 진단** — 사용 목적에 따라 LLM이 평가지표 가중치를 추천 (구현 중)
-- **LLM 리포트** — 진단 결과를 자연어로 해석하고 개선 방향 제시 (구현 중)
+- **RAG 기반 개선 리포트** — 진단 결과를 자연어로 해석하고 참조 문서 출처와 함께 개선 방향 제시
 - **비동기 처리** — RabbitMQ 기반 메시지 큐로 진단 요청/결과 비동기 처리
 
 ## 아키텍처
 
 ```
-[React + antd]  →  [Spring Boot API]  →  [MySQL]
+[React + antd]  →  [Nginx (리버스 프록시)]
                          ↓
-                    [RabbitMQ]
-                    ↙        ↘
-          diagnosis.queue   result.queue
-                ↓                ↑
-          [Python Worker — DSC Engine v3.2]
-                         ↓
-                       [S3]
+                  [Spring Boot API]  →  [MySQL]
+                    ↓           ↓
+              [RabbitMQ]    [RAG Service (FastAPI)]
+              ↙        ↘         ↓
+    diagnosis.queue   result.queue  [ChromaDB] + [Claude Haiku]
+          ↓                ↑
+    [Python Worker — DSC Engine v3.2]
+                   ↓
+                 [S3]
 ```
 
 ## 기술 스택
@@ -34,49 +36,111 @@
 | Message Queue | RabbitMQ 3 |
 | Object Storage | AWS S3 (로컬: LocalStack) |
 | 진단 엔진 | Python 3.11, DSC Engine v3.2 (pandas, scipy) |
-| LLM | Google Gemini (프로토타입) → Claude Haiku (운영) |
+| RAG | ChromaDB, LangChain, sentence-transformers (all-MiniLM-L6-v2) |
+| LLM | Claude Haiku (Anthropic API) |
 | Auth | JWT (JJWT, HMAC-SHA256) |
-| Infra | Docker Compose, AWS EC2 (t3.small), GitHub Actions CI/CD |
+| Infra | Docker Compose, AWS EC2 (t3.small, Elastic IP), GitHub Actions CI/CD |
 
-## 빠른 시작
+## 운영 환경 접속
 
-### 로컬 개발
+배포된 플랫폼을 사용하려면 브라우저에서 접속하면 됩니다. Docker나 로컬 설정 불필요.
+
+```
+http://3.39.50.163
+```
+
+## 로컬 개발 환경 세팅
+
+로컬에서 코드를 수정하고 테스트하려는 개발자를 위한 가이드입니다.
+
+### 사전 요구사항
+
+- **Docker Desktop** (MySQL, RabbitMQ, LocalStack, RAG, Engine 실행용)
+- **Java 17** (Spring Boot 백엔드)
+- **Node.js 20** (React 프론트엔드)
+
+### Step 1: 환경변수 설정
+
+프로젝트 루트에 `.env` 파일을 생성합니다. (`.gitignore`에 포함되어 있어 git에 추적되지 않음)
+
+```properties
+# Database
+DB_URL=jdbc:mysql://localhost:3306/scorecard?useSSL=false&serverTimezone=Asia/Seoul&allowPublicKeyRetrieval=true
+DB_USERNAME=scorecard_user
+DB_PASSWORD=scorecard_password
+
+# S3 (LocalStack — 로컬 개발용, 실제 AWS 아님)
+AWS_S3_ENDPOINT=http://localhost:4566
+AWS_S3_BUCKET=scorecard-uploads
+AWS_ACCESS_KEY_ID=test
+AWS_SECRET_ACCESS_KEY=test
+AWS_REGION=ap-northeast-2
+
+# RabbitMQ
+RABBITMQ_HOST=localhost
+RABBITMQ_PORT=5672
+
+# JWT (HS256 키, 최소 64자 — 팀원에게 공유받기)
+JWT_SECRET=<팀원에게 공유받은 값>
+
+# Claude API (RAG 서비스용 — 팀원에게 공유받기)
+ANTHROPIC_API_KEY=<팀원에게 공유받은 값>
+```
+
+> `JWT_SECRET`과 `ANTHROPIC_API_KEY`는 보안상 README에 포함하지 않습니다. 팀원 간 직접 공유하세요.
+
+### Step 2: Docker 인프라 실행
 
 ```bash
-# 1) 인프라 실행 (MySQL, RabbitMQ, LocalStack, 진단 엔진)
 docker compose up -d
-
-# 2) 백엔드 실행
-./gradlew bootRun
-
-# 3) 프론트엔드 실행
-cd frontend && npm install && npm run dev
 ```
+
+다음 서비스가 실행됩니다:
+
+| 서비스 | 포트 | 용도 |
+|--------|------|------|
+| MySQL | 3306 | 데이터베이스 |
+| RabbitMQ | 5672, 15672 | 메시지 큐 (15672: 관리 UI, guest/guest) |
+| LocalStack | 4566 | 로컬 S3 대체 |
+| RAG Service | 8001 | 임베딩 검색 + LLM |
+| Engine | - | DSC 진단 워커 (포트 노출 없음, RabbitMQ로 통신) |
+
+### Step 3: RAG 인덱싱 (최초 1회)
+
+RAG 서비스가 참조할 문서를 ChromaDB에 인덱싱합니다.
+
+```bash
+docker exec scorecard-rag python scripts/index_documents.py
+```
+
+### Step 4: 백엔드 실행
+
+```bash
+./gradlew bootRun
+```
+
+Spring Boot가 `http://localhost:8080`에서 실행됩니다.
+
+### Step 5: 프론트엔드 실행
+
+```bash
+cd frontend
+npm install    # 최초 1회
+npm run dev
+```
+
+React 개발 서버가 `http://localhost:5173`에서 실행됩니다.
+
+### 접속 확인
 
 - 프론트엔드: http://localhost:5173
 - 백엔드 API: http://localhost:8080
 - RabbitMQ 관리: http://localhost:15672 (guest/guest)
 
-### 운영 배포 (EC2)
+### 테스트
 
 ```bash
-docker-compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
-```
-
-## 환경변수
-
-`.env` 파일 필요:
-
-```
-DB_URL=jdbc:mysql://localhost:3306/scorecard?useSSL=false&serverTimezone=Asia/Seoul&allowPublicKeyRetrieval=true
-DB_USERNAME=root
-DB_PASSWORD=root
-JWT_SECRET=your-secret-key
-AWS_S3_ENDPOINT=http://localhost:4566
-AWS_S3_BUCKET=scorecard-uploads
-AWS_REGION=ap-northeast-2
-AWS_ACCESS_KEY_ID=test
-AWS_SECRET_ACCESS_KEY=test
+./gradlew test
 ```
 
 ## API 엔드포인트
@@ -112,6 +176,13 @@ scorecard/
 ├── engine/                                     # DSC 진단 엔진
 │   ├── dsc_engine.py   # 8개 품질 지표 계산
 │   └── worker.py       # RabbitMQ Consumer
+├── rag-service/                                # RAG 서비스 (FastAPI)
+│   ├── rag/
+│   │   ├── retriever.py   # ChromaDB 벡터 검색
+│   │   └── generator.py   # Claude Haiku 응답 생성
+│   ├── scripts/
+│   │   └── index_documents.py  # 문서 인덱싱
+│   └── data/docs/         # RAG 참조 문서
 ├── docker-compose.yml                          # 로컬 개발용
 ├── docker-compose.prod.yml                     # 운영 배포용
 └── .github/workflows/deploy.yml                # CI/CD
@@ -121,13 +192,15 @@ scorecard/
 
 | 이름 | 역할 |
 |------|------|
-| 이지훈 | 웹 플랫폼 개발 (Spring Boot, React, 인프라) |
+| 이지훈 | 웹 플랫폼 개발 (Spring Boot, React, RAG, 인프라) |
 | 고준서 | 데이터 품질 진단 엔진 개발 (DSC v3.2) |
 | 김동훈 | 프론트엔드 / API 개발 |
 
 ## 문서
 
-- `PRD.md` — 시스템 설계, 인터페이스 계약, API 스펙
-- `develop.md` — 작업 기록, 진행 현황
-- `CLAUDE.md` — AI 어시스턴트 컨텍스트
-- `docs/fastapi-integration-spec.md` — 진단 엔진 연동 스펙
+- `docs/PRD.md` — 시스템 설계, 인터페이스 계약, API 스펙
+- `docs/develop.md` — 작업 기록, 진행 현황
+- `docs/architecture.md` — 기술 스택, 아키텍처, 패키지 구조
+- `docs/api-endpoints.md` — API 엔드포인트 목록
+- `docs/conventions.md` — 코드 컨벤션, 빌드 명령, 환경변수
+- `docs/sessions/` — 작업 세션 기록
