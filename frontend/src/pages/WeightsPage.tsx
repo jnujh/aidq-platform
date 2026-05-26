@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Card, Slider, Button, Typography, Spin, Divider, message } from 'antd';
 import { ExperimentOutlined } from '@ant-design/icons';
 import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { weightsApi } from '../api/weights';
 import { jobsApi } from '../api/jobs';
 import { getErrorMessage } from '../utils/errorHandler';
@@ -108,8 +109,8 @@ export default function WeightsPage() {
               title="LLM 추천 이유"
               style={{ marginBottom: 24, background: '#f0f5ff', border: '1px solid #adc6ff' }}
             >
-              <div style={{ lineHeight: 1.8, fontSize: '14px' }}>
-                <Markdown>{reasoning}</Markdown>
+              <div className="markdown-content" style={{ lineHeight: 1.8, fontSize: '14px' }}>
+                <Markdown remarkPlugins={[remarkGfm]}>{reasoning}</Markdown>
               </div>
             </Card>
           )}

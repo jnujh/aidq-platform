@@ -53,8 +53,35 @@ Our platform has exactly 8 quality metrics. You must recommend weights for these
     "feature_correlation": <int>,
     "value_accuracy": <int>
   }},
-  "reasoning": "<한국어로 추천 이유를 구체적으로 설명. 참조 문서의 실제 사례를 인용하여 설명>"
+  "reasoning": "<Markdown 형식의 한국어 추천 근거. 아래 형식을 반드시 따를 것>"
 }}
+
+## Reasoning Format (Markdown)
+The "reasoning" field MUST follow this exact Markdown structure.
+IMPORTANT: Do NOT use Markdown tables. Use lists instead.
+
+### 📋 추천 요약
+> 한 문장으로 이 가중치 배분의 핵심 전략을 설명
+
+### 📊 가중치 배분
+(가중치 높은 순으로 8개 모두 나열. 아래 형식 그대로 사용:)
+- 🔴 **completeness** — 18점 (상)
+- 🔴 **class_balance** — 16점 (상)
+- 🟡 **validity** — 12점 (중)
+- ...
+
+(🔴=상(15+), 🟡=중(8~14), 🟢=하(0~7))
+
+### 🔍 상세 근거
+(가중치 높은 순서대로 8개 지표 모두 설명. 아래 형식:)
+
+#### 🔴 completeness (18점)
+설명 2~3문장. 참조 문서 인용 시 "**문서 전체 이름**에 따르면..." 형식으로 볼드 처리.
+
+#### 🟡 validity (12점)
+설명 2~3문장.
+
+(이런 식으로 8개 지표를 빠짐없이 #### 소제목으로 작성)
 """
 
 # ── 2단계: 개선 가이드 프롬프트 ──
@@ -74,16 +101,64 @@ Based on the diagnosis results and reference documents, write a detailed improve
 
 ## Writing Rules
 1. Write entirely in Korean (한국어). Do NOT mix Chinese, Japanese, or other languages.
-2. Use Markdown formatting for readability: **bold** for key terms, ## for section headings, numbered lists for items.
+2. Use Markdown formatting with emoji icons for visual hierarchy.
 3. Be specific — reference actual techniques and examples from the reference documents.
-4. Structure your report as:
-   - ## 종합 평가: Overall score interpretation
-   - ## 강점 분석: Metrics scoring 0.9+ and why they're good
-   - ## 개선 필요 항목: Metrics scoring below 0.8, with SPECIFIC fix recommendations from the reference documents
-   - ## 실행 가이드: Top 3 most urgent improvements, prioritized, with concrete steps
-5. When mentioning technical terms, add simple explanations in parentheses.
-6. Base ALL recommendations on the reference documents provided. Do not hallucinate techniques or facts not in the documents.
-7. When citing a reference document, use its FULL NAME (e.g., "Kaggle Telco Customer Churn 분석에 따르면..."), NOT document numbers.
+4. When mentioning technical terms, add simple explanations in parentheses.
+5. Base ALL recommendations on the reference documents provided. Do not hallucinate techniques or facts not in the documents.
+6. When citing a reference document, use its FULL NAME (e.g., "**Kaggle Telco Customer Churn 분석**에 따르면...") with bold.
+7. You MUST use Markdown tables where appropriate (e.g., technique comparisons). Tables render correctly in our frontend.
+
+## Report Structure (follow this EXACTLY)
+
+### 📊 종합 평가
+> 전체 점수와 등급을 한 문장으로 요약
+
+**주요 지표 현황:**
+- ✅ **지표명** — 점수% (간단한 한 줄 해석)
+- ✅ **지표명** — 점수%
+- ⚠️ **지표명** — 점수% ← 개선 필요
+- ❌ **지표명** — 점수% ← 심각
+
+(✅=90%이상 양호, ⚠️=80~90% 주의, ❌=80%미만 심각. 8개 지표를 점수 높은 순으로 모두 나열)
+
+---
+
+### ✅ 강점 분석
+(90% 이상인 지표들을 간략히 설명. 각 지표 2문장 이내로 핵심만)
+
+---
+
+### 🔧 개선 필요 항목
+(80% 미만인 지표를 심각도 순으로 상세 분석. 각 항목은 아래 형식:)
+
+#### ❌ 지표명 (점수%) — 심각도: 높음
+
+**현황:** 현재 상태를 구체적 수치와 함께 1~2문장으로 설명
+
+**문제점:** 이 문제가 사용 목적(모델 학습 등)에 미치는 영향 1~2문장
+
+**해결 방안:** (참조 문서 기반으로 구체적 기법을 표로 정리)
+
+| 기법 | 설명 | 적용 조건 |
+|------|------|-----------|
+| 기법명 | 설명 | 조건 |
+
+---
+
+### 🚀 실행 가이드
+(가장 시급한 개선 3가지를 우선순위별로 정리)
+
+**1순위: 제목**
+- 목표: 한 줄
+- 구체적 실행 단계 2~3개
+
+**2순위: 제목**
+- 목표: 한 줄
+- 구체적 실행 단계 2~3개
+
+**3순위: 제목**
+- 목표: 한 줄
+- 구체적 실행 단계 2~3개
 
 Write the report:
 """
@@ -182,7 +257,7 @@ def generate_weights(purpose: str, search_results: list[dict]) -> dict:
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     response = client.messages.create(
         model="claude-haiku-4-5-20251001",
-        max_tokens=2000,
+        max_tokens=4000,
         messages=[{"role": "user", "content": prompt}],
     )
 
@@ -240,7 +315,7 @@ def generate_report(diagnosis_result: dict, purpose: str, search_results: list[d
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     response = client.messages.create(
         model="claude-haiku-4-5-20251001",
-        max_tokens=2000,
+        max_tokens=4000,
         messages=[{"role": "user", "content": prompt}],
     )
 

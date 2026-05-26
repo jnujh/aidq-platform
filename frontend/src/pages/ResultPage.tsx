@@ -12,6 +12,7 @@ import {
 } from 'antd';
 import { FileTextOutlined, ReloadOutlined } from '@ant-design/icons';
 import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { resultsApi, type JobResultResponse, type ParentResultDto } from '../api/results';
 import { getErrorCode, getErrorMessage } from '../utils/errorHandler';
 import { BRAND } from '../config/brand';
@@ -257,11 +258,11 @@ export default function ResultPage() {
             title={<><FileTextOutlined /> LLM 분석 리포트</>}
             style={{ marginTop: 24, borderRadius: 12 }}
           >
-            <div style={{
+            <div className="markdown-content" style={{
               lineHeight: 1.8,
               fontSize: 14,
             }}>
-              <Markdown>{report}</Markdown>
+              <Markdown remarkPlugins={[remarkGfm]}>{report}</Markdown>
             </div>
           </Card>
         </>
