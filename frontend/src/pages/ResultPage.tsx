@@ -5,6 +5,7 @@ import { FileTextOutlined } from '@ant-design/icons';
 import { resultsApi, type JobResultResponse } from '../api/results';
 import { getErrorCode, getErrorMessage } from '../utils/errorHandler';
 import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const { Title, Paragraph } = Typography;
 
@@ -90,11 +91,11 @@ export default function ResultPage() {
             title={<><FileTextOutlined /> LLM 분석 리포트</>}
             style={{ marginTop: 24 }}
           >
-            <div style={{
+            <div className="markdown-content" style={{
               lineHeight: 1.8,
               fontSize: '14px',
             }}>
-              <Markdown>{report}</Markdown>
+              <Markdown remarkPlugins={[remarkGfm]}>{report}</Markdown>
             </div>
           </Card>
         </>

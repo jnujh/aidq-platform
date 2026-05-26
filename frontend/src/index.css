@@ -3,3 +3,44 @@
   padding: 0;
   box-sizing: border-box;
 }
+
+/* Markdown 콘텐츠 스타일 */
+.markdown-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+  font-size: 14px;
+}
+
+.markdown-content th {
+  background: #1890ff;
+  color: #fff;
+  font-weight: 600;
+  padding: 10px 14px;
+  text-align: left;
+}
+
+.markdown-content td {
+  padding: 8px 14px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.markdown-content tr:hover td {
+  background: #fafafa;
+}
+
+.markdown-content blockquote {
+  border-left: 4px solid #1890ff;
+  background: #f6f8fa;
+  padding: 12px 16px;
+  margin: 12px 0;
+  border-radius: 0 6px 6px 0;
+  color: #333;
+}
+
+.markdown-content h3 {
+  margin-top: 20px;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #e8e8e8;
+}
