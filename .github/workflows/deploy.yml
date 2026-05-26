@@ -20,8 +20,8 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Gradle 빌드
-        run: chmod +x gradlew && ./gradlew build -x test --no-daemon
+      - name: Gradle 빌드 + 테스트
+        run: chmod +x gradlew && ./gradlew build --no-daemon
 
       # Frontend 빌드
       - name: Node 20 설정
@@ -29,10 +29,15 @@ jobs:
         with:
           node-version: 20
 
-      - name: Frontend 빌드
+      - name: Frontend 린트
         run: |
           cd frontend
           npm ci
+          npm run lint
+
+      - name: Frontend 빌드
+        run: |
+          cd frontend
           npm run build
 
   # ── CD: EC2 자동 배포 ──
@@ -47,8 +52,22 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          command_timeout: 20m
           script: |
+            # Swap 설정 (이미 있으면 스킵)
+            if [ ! -f /swapfile ]; then
+              sudo fallocate -l 2G /swapfile
+              sudo chmod 600 /swapfile
+              sudo mkswap /swapfile
+              sudo swapon /swapfile
+              echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+            fi
+            sudo swapon --show
+
             cd aidq-platform
             git pull origin main
             docker-compose -f docker-compose.prod.yml --env-file .env.prod down
             docker-compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+            echo "RAG 인덱싱 대기 중..."
+            sleep 15
+            docker exec scorecard-rag python scripts/index_documents.py || echo "RAG 인덱싱 실패 (서비스는 계속 동작)"

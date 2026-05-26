@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { authApi } from '../api/auth';
 import { authStore } from '../stores/authStore';
 import { useState } from 'react';
+import { getErrorMessage } from '../utils/errorHandler';
 
 const { Title, Text } = Typography;
 
@@ -18,9 +19,8 @@ export default function LoginPage() {
       authStore.setToken(res.data.data.accessToken);
       message.success('로그인 성공');
       navigate('/');
-    } catch (err: any) {
-      const msg = err.response?.data?.error?.message || '로그인에 실패했습니다.';
-      message.error(msg);
+    } catch (err) {
+      message.error(getErrorMessage(err, '로그인에 실패했습니다.'));
     } finally {
       setLoading(false);
     }

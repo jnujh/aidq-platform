@@ -11,7 +11,9 @@ import {
   Typography,
 } from 'antd';
 import { FileTextOutlined, ReloadOutlined } from '@ant-design/icons';
+import Markdown from 'react-markdown';
 import { resultsApi, type JobResultResponse, type ParentResultDto } from '../api/results';
+import { getErrorCode, getErrorMessage } from '../utils/errorHandler';
 import { BRAND } from '../config/brand';
 import ScoreDonut from '../components/charts/ScoreDonut';
 import MetricBarList, { type MetricItem } from '../components/charts/MetricBarList';
@@ -141,15 +143,15 @@ export default function ResultPage() {
             // 리포트 없어도 결과는 표시
           }
         }
-      } catch (err: any) {
+      } catch (err) {
         if (cancelled) return;
-        const code = err.response?.data?.error?.code;
+        const code = getErrorCode(err);
         if (code === 'JOB_NOT_COMPLETED') {
           setError('진단이 아직 진행 중입니다. 잠시 후 다시 확인해주세요.');
         } else if (code === 'JOB_NOT_FOUND') {
           setError('존재하지 않는 작업입니다.');
         } else {
-          setError(err.response?.data?.error?.message || '결과를 불러오는데 실패했습니다.');
+          setError(getErrorMessage(err, '결과를 불러오는데 실패했습니다.'));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -255,16 +257,12 @@ export default function ResultPage() {
             title={<><FileTextOutlined /> LLM 분석 리포트</>}
             style={{ marginTop: 24, borderRadius: 12 }}
           >
-            <pre style={{
+            <div style={{
               lineHeight: 1.8,
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-              fontFamily: 'inherit',
               fontSize: 14,
-              margin: 0,
             }}>
-              {report}
-            </pre>
+              <Markdown>{report}</Markdown>
+            </div>
           </Card>
         </>
       )}
