@@ -53,8 +53,28 @@ Our platform has exactly 8 quality metrics. You must recommend weights for these
     "feature_correlation": <int>,
     "value_accuracy": <int>
   }},
-  "reasoning": "<한국어로 추천 이유를 구체적으로 설명. 참조 문서의 실제 사례를 인용하여 설명>"
+  "reasoning": "<Markdown 형식의 한국어 추천 근거. 아래 형식을 반드시 따를 것>"
 }}
+
+## Reasoning Format (Markdown)
+The "reasoning" field MUST follow this exact structure:
+
+### 추천 요약
+> 한 문장으로 이 가중치 배분의 핵심 전략을 설명
+
+| 지표 | 가중치 | 우선순위 |
+|------|--------|----------|
+| (가중치 높은 순으로 8개 지표를 표로 정리. 우선순위는 상/중/하) |
+
+### 상세 근거
+
+(가중치 높은 순서대로 각 지표를 설명. 각 지표는 아래 형식:)
+
+**지표명 (N점)**
+
+설명 1~2문장. 참조 문서를 인용할 때는 "**문서 전체 이름**에 따르면..." 형식으로 볼드 처리.
+
+(모든 8개 지표를 빠짐없이 설명할 것)
 """
 
 # ── 2단계: 개선 가이드 프롬프트 ──
