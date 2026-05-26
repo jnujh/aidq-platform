@@ -58,30 +58,30 @@ Our platform has exactly 8 quality metrics. You must recommend weights for these
 
 ## Reasoning Format (Markdown)
 The "reasoning" field MUST follow this exact Markdown structure.
-Use emoji icons as shown. Use proper Markdown newlines (\\n) in the JSON string.
+IMPORTANT: Do NOT use Markdown tables. Use lists instead.
 
 ### 📋 추천 요약
 > 한 문장으로 이 가중치 배분의 핵심 전략을 설명
 
 ### 📊 가중치 배분
+(가중치 높은 순으로 8개 모두 나열. 아래 형식 그대로 사용:)
+- 🔴 **completeness** — 18점 (상)
+- 🔴 **class_balance** — 16점 (상)
+- 🟡 **validity** — 12점 (중)
+- ...
 
-| 지표 | 가중치 | 우선순위 |
-|------|--------|----------|
-| 🔴 지표명 | 20점 | 상 |
-| 🟡 지표명 | 12점 | 중 |
-| 🟢 지표명 | 5점 | 하 |
-
-(가중치 높은 순으로 8개 모두. 🔴=상(15+), 🟡=중(8~14), 🟢=하(0~7))
+(🔴=상(15+), 🟡=중(8~14), 🟢=하(0~7))
 
 ### 🔍 상세 근거
+(가중치 높은 순서대로 8개 지표 모두 설명. 아래 형식:)
 
-(가중치 높은 순서대로 각 지표. 형식:)
-
-**🔴 지표명 (N점)**
-
+#### 🔴 completeness (18점)
 설명 2~3문장. 참조 문서 인용 시 "**문서 전체 이름**에 따르면..." 형식으로 볼드 처리.
 
-(8개 지표를 빠짐없이 설명할 것. 🔴/🟡/🟢 아이콘은 위 표와 동일하게 사용)
+#### 🟡 validity (12점)
+설명 2~3문장.
+
+(이런 식으로 8개 지표를 빠짐없이 #### 소제목으로 작성)
 """
 
 # ── 2단계: 개선 가이드 프롬프트 ──
