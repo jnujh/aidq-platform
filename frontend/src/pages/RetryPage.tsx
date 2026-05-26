@@ -26,8 +26,9 @@ export default function RetryPage() {
   const parentIdNum = Number(parentJobId);
 
   const [parent, setParent] = useState<JobStatusResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const invalidId = !Number.isFinite(parentIdNum);
+  const [loading, setLoading] = useState(!invalidId);
+  const [loadError, setLoadError] = useState<string | null>(invalidId ? '잘못된 작업 ID 입니다.' : null);
 
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [jobName, setJobName] = useState('');
@@ -35,8 +36,6 @@ export default function RetryPage() {
 
   useEffect(() => {
     if (!Number.isFinite(parentIdNum)) {
-      setLoadError('잘못된 작업 ID 입니다.');
-      setLoading(false);
       return;
     }
     let cancelled = false;
@@ -49,12 +48,13 @@ export default function RetryPage() {
         if (res.data.data.jobName) {
           setJobName(`${res.data.data.jobName} (재진단)`);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (cancelled) return;
-        const code = err.response?.data?.error?.code;
+        const axiosErr = err as { response?: { data?: { error?: { code?: string; message?: string } } } };
+        const code = axiosErr.response?.data?.error?.code;
         if (code === 'JOB_NOT_FOUND') setLoadError('존재하지 않는 작업입니다.');
         else if (code === 'FORBIDDEN') setLoadError('이 작업에 접근할 권한이 없습니다.');
-        else setLoadError(err.response?.data?.error?.message || '부모 작업 정보를 불러오지 못했습니다.');
+        else setLoadError(axiosErr.response?.data?.error?.message || '부모 작업 정보를 불러오지 못했습니다.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -86,13 +86,14 @@ export default function RetryPage() {
       );
       message.success('재진단이 시작되었습니다.');
       navigate(`/results/${res.data.data.jobId}`);
-    } catch (err: any) {
-      const code = err.response?.data?.error?.code;
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { error?: { code?: string; message?: string } } } };
+      const code = axiosErr.response?.data?.error?.code;
       if (code === 'EMPTY_FILE') message.error('빈 파일은 업로드할 수 없습니다.');
       else if (code === 'JOB_PARENT_NOT_COMPLETED') {
         message.error('완료된 작업에 대해서만 재진단이 가능합니다.');
       } else {
-        message.error(err.response?.data?.error?.message || '재진단 요청에 실패했습니다.');
+        message.error(axiosErr.response?.data?.error?.message || '재진단 요청에 실패했습니다.');
       }
     } finally {
       setSubmitting(false);
