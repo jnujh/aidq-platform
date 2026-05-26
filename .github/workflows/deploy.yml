@@ -54,10 +54,18 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           command_timeout: 20m
           script: |
+            # Swap 설정 (이미 있으면 스킵)
+            if [ ! -f /swapfile ]; then
+              sudo fallocate -l 2G /swapfile
+              sudo chmod 600 /swapfile
+              sudo mkswap /swapfile
+              sudo swapon /swapfile
+              echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+            fi
+            sudo swapon --show
+
             cd aidq-platform
             git pull origin main
-            # .env.prod에서 LLM_API_KEY → ANTHROPIC_API_KEY 마이그레이션 (1회성)
-            sed -i 's/^LLM_API_KEY/ANTHROPIC_API_KEY/' .env.prod
             docker-compose -f docker-compose.prod.yml --env-file .env.prod down
             docker-compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
             echo "RAG 인덱싱 대기 중..."
