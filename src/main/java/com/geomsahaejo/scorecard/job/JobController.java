@@ -1,6 +1,7 @@
 package com.geomsahaejo.scorecard.job;
 
 import com.geomsahaejo.scorecard.global.response.ApiResponse;
+import com.geomsahaejo.scorecard.job.dto.JobRetryResponse;
 import com.geomsahaejo.scorecard.job.dto.JobStatusResponse;
 import com.geomsahaejo.scorecard.job.dto.JobSubmitResponse;
 import lombok.RequiredArgsConstructor;
@@ -45,6 +46,17 @@ public class JobController {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    @PostMapping("/{parentJobId}/retry")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse<JobRetryResponse> retry(
+            @PathVariable Long parentJobId,
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "jobName", required = false) String jobName) {
+        Long userId = getUserId();
+        JobRetryResponse response = jobService.retryDiagnosis(userId, parentJobId, jobName, file);
+        return ApiResponse.success(response);
     }
 
     @GetMapping("/{jobId}/status")

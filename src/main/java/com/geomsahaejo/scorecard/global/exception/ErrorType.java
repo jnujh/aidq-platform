@@ -27,6 +27,8 @@ public enum ErrorType {
     FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "파일 업로드에 실패했습니다."),
     MESSAGE_PUBLISH_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "진단 요청 발행에 실패했습니다."),
     JOB_NOT_COMPLETED(HttpStatus.CONFLICT, "아직 진단이 완료되지 않은 작업입니다."),
+    JOB_PARENT_NOT_COMPLETED(HttpStatus.BAD_REQUEST, "재진단은 완료된 작업에 대해서만 가능합니다."),
+    EMPTY_FILE(HttpStatus.BAD_REQUEST, "빈 파일은 업로드할 수 없습니다."),
     RESULT_NOT_FOUND(HttpStatus.NOT_FOUND, "진단 결과가 존재하지 않습니다."),
     REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "리포트가 아직 생성되지 않았습니다."),
 
