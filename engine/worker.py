@@ -40,7 +40,13 @@ def download_csv_from_s3(s3_key: str) -> pd.DataFrame:
     s3 = get_s3_client()
     response = s3.get_object(Bucket=S3_BUCKET, Key=s3_key)
     content = response['Body'].read()
-    return pd.read_csv(io.BytesIO(content))
+    # 한국 공공데이터 CSV는 CP949인 경우가 많음 → UTF-8 → CP949 순서로 시도
+    for encoding in ('utf-8-sig', 'cp949'):
+        try:
+            return pd.read_csv(io.BytesIO(content), encoding=encoding)
+        except UnicodeDecodeError:
+            continue
+    raise ValueError(f'CSV 인코딩을 인식할 수 없습니다 (utf-8-sig/cp949 모두 실패): {s3_key}')
 
 
 def publish_result(channel, result_message: dict):
