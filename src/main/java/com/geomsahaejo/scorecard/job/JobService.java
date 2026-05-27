@@ -111,6 +111,58 @@ public class JobService {
                 child.getStatus().name());
     }
 
+    @Transactional
+    public JobSubmitResponse startDiagnosis(Long userId, String s3Key, String originalFilename,
+                                             String jobName, String purpose, Map<String, Double> weights) {
+        String weightsJson = serializeWeights(weights);
+        Job job = Job.create(userId, jobName, originalFilename, purpose, s3Key, weightsJson);
+        jobRepository.save(job);
+
+        try {
+            jobMessagePublisher.publish(job, weights);
+        } catch (Exception e) {
+            log.error("[MQ] 진단 요청 발행 실패 - jobId: {}", job.getId(), e);
+            job.updateStatus(JobStatus.FAILED);
+            jobRepository.save(job);
+            throw new CustomException(ErrorType.MESSAGE_PUBLISH_FAILED);
+        }
+
+        return new JobSubmitResponse(job.getId(), job.getStatus().name());
+    }
+
+    @Transactional
+    public JobRetryResponse retryWithS3Key(Long userId, Long parentJobId,
+                                            String s3Key, String originalFilename, String jobName) {
+        Job parent = jobRepository.findById(parentJobId)
+                .orElseThrow(() -> new CustomException(ErrorType.JOB_NOT_FOUND));
+
+        if (!parent.getUserId().equals(userId)) {
+            throw new CustomException(ErrorType.FORBIDDEN);
+        }
+
+        if (parent.getStatus() != JobStatus.DONE) {
+            throw new CustomException(ErrorType.JOB_PARENT_NOT_COMPLETED);
+        }
+
+        Job child = Job.createRetry(parent, userId, jobName, originalFilename, s3Key);
+        jobRepository.save(child);
+
+        Map<String, Double> weights = deserializeWeights(child.getWeightsJson());
+
+        try {
+            jobMessagePublisher.publish(child, weights);
+        } catch (Exception e) {
+            log.error("[MQ] 재진단 요청 발행 실패 - jobId: {}, parentJobId: {}",
+                    child.getId(), parentJobId, e);
+            child.updateStatus(JobStatus.FAILED);
+            jobRepository.save(child);
+            throw new CustomException(ErrorType.MESSAGE_PUBLISH_FAILED);
+        }
+
+        return new JobRetryResponse(child.getId(), child.getParentJobId(),
+                child.getStatus().name());
+    }
+
     @Transactional(readOnly = true)
     public JobStatusResponse getStatus(Long userId, Long jobId) {
         Job job = getByIdAndUserId(jobId, userId);
