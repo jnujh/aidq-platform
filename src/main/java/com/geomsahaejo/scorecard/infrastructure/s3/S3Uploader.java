@@ -12,8 +12,12 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.UUID;
 
 @Slf4j
@@ -22,6 +26,7 @@ import java.util.UUID;
 public class S3Uploader {
 
     private final S3Client s3Client;
+    private final S3Presigner s3Presigner;
     private final S3Properties s3Properties;
 
     public String upload(Long userId, MultipartFile file) {
@@ -73,6 +78,28 @@ public class S3Uploader {
             throw new CustomException(ErrorType.INTERNAL_SERVER_ERROR);
         }
     }
+
+    public PresignedUploadResult generatePresignedUrl(Long userId, String filename, String contentType) {
+        String s3Key = generateKey(userId, filename);
+
+        PutObjectRequest putRequest = PutObjectRequest.builder()
+                .bucket(s3Properties.bucket())
+                .key(s3Key)
+                .contentType(contentType)
+                .build();
+
+        PutObjectPresignRequest presignRequest = PutObjectPresignRequest.builder()
+                .signatureDuration(Duration.ofMinutes(60))
+                .putObjectRequest(putRequest)
+                .build();
+
+        PresignedPutObjectRequest presigned = s3Presigner.presignPutObject(presignRequest);
+
+        log.info("Presigned URL 생성 완료: bucket={}, key={}", s3Properties.bucket(), s3Key);
+        return new PresignedUploadResult(presigned.url().toString(), s3Key);
+    }
+
+    public record PresignedUploadResult(String uploadUrl, String s3Key) {}
 
     private String generateKey(Long userId, String originalFilename) {
         String sanitized = (originalFilename != null) ? originalFilename : "unknown";

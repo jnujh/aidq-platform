@@ -8,6 +8,7 @@ import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
 import java.net.URI;
 
@@ -32,6 +33,29 @@ public class S3Config {
     @Profile("prod")
     public S3Client prodS3Client(S3Properties props) {
         return S3Client.builder()
+                .region(Region.of(props.region()))
+                .credentialsProvider(StaticCredentialsProvider.create(
+                        AwsBasicCredentials.create(props.accessKey(), props.secretKey())
+                ))
+                .build();
+    }
+
+    @Bean
+    @Profile("local")
+    public S3Presigner localS3Presigner(S3Properties props) {
+        return S3Presigner.builder()
+                .endpointOverride(URI.create(props.endpoint()))
+                .region(Region.of(props.region()))
+                .credentialsProvider(StaticCredentialsProvider.create(
+                        AwsBasicCredentials.create(props.accessKey(), props.secretKey())
+                ))
+                .build();
+    }
+
+    @Bean
+    @Profile("prod")
+    public S3Presigner prodS3Presigner(S3Properties props) {
+        return S3Presigner.builder()
                 .region(Region.of(props.region()))
                 .credentialsProvider(StaticCredentialsProvider.create(
                         AwsBasicCredentials.create(props.accessKey(), props.secretKey())
