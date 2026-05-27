@@ -6,6 +6,7 @@ import {
   Descriptions,
   Form,
   Input,
+  Progress,
   Result,
   Spin,
   Typography,
@@ -15,6 +16,7 @@ import {
 import { InboxOutlined, ReloadOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd';
 import { jobsApi, type JobStatusResponse } from '../api/jobs';
+import { uploadsApi } from '../api/uploads';
 import { BRAND } from '../config/brand';
 
 const { Dragger } = Upload;
@@ -33,6 +35,7 @@ export default function RetryPage() {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [jobName, setJobName] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [uploadPercent, setUploadPercent] = useState(0);
 
   useEffect(() => {
     if (!Number.isFinite(parentIdNum)) {
@@ -76,12 +79,22 @@ export default function RetryPage() {
       return;
     }
 
-    const file = fileList[0] as unknown as { originFileObj: File };
+    const file = (fileList[0] as unknown as { originFileObj: File }).originFileObj;
     setSubmitting(true);
+    setUploadPercent(0);
     try {
-      const res = await jobsApi.retryJob(
+      // 1) Presigned URL 발급
+      const presignRes = await uploadsApi.presign(file.name, file.type || 'application/octet-stream');
+      const { uploadUrl, s3Key } = presignRes.data.data;
+
+      // 2) S3에 직접 업로드
+      await uploadsApi.uploadToS3(uploadUrl, file, (percent) => setUploadPercent(percent));
+
+      // 3) 재진단 시작
+      const res = await uploadsApi.retryStart(
         parentIdNum,
-        file.originFileObj,
+        s3Key,
+        file.name,
         jobName.trim() || undefined,
       );
       message.success('재진단이 시작되었습니다.');
@@ -97,6 +110,7 @@ export default function RetryPage() {
       }
     } finally {
       setSubmitting(false);
+      setUploadPercent(0);
     }
   };
 
@@ -210,6 +224,10 @@ export default function RetryPage() {
           </Dragger>
         </Form.Item>
       </Form>
+
+      {submitting && uploadPercent > 0 && (
+        <Progress percent={uploadPercent} status="active" style={{ marginBottom: 16 }} />
+      )}
 
       <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 16 }}>
         <Button onClick={() => navigate(`/results/${parent.jobId}`)}>

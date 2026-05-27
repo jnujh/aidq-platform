@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Upload, Button, message, Typography, Input, Form } from 'antd';
+import { Upload, Button, message, Typography, Input, Form, Progress } from 'antd';
 import { InboxOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { jobsApi } from '../api/jobs';
+import { uploadsApi } from '../api/uploads';
 import { getErrorMessage } from '../utils/errorHandler';
 import type { UploadFile } from 'antd';
 
@@ -16,6 +16,7 @@ export default function UploadPage() {
   const [jobName, setJobName] = useState('');
   const [purpose, setPurpose] = useState('');
   const [loading, setLoading] = useState(false);
+  const [uploadPercent, setUploadPercent] = useState(0);
 
   const handleUpload = async () => {
     if (fileList.length === 0) {
@@ -23,29 +24,39 @@ export default function UploadPage() {
       return;
     }
 
-    const file = fileList[0] as unknown as { originFileObj: File };
+    const file = (fileList[0] as unknown as { originFileObj: File }).originFileObj;
+    setLoading(true);
+    setUploadPercent(0);
 
-    if (purpose) {
-      // 사용 목적이 있으면 → 가중치 추천 화면으로 이동
-      navigate('/jobs/weights', {
-        state: {
-          file: file.originFileObj,
-          jobName: jobName || undefined,
-          purpose,
-        },
-      });
-    } else {
-      // 사용 목적이 없으면 → 바로 기본 가중치로 진단
-      setLoading(true);
-      try {
-        await jobsApi.submit(file.originFileObj, jobName || undefined);
+    try {
+      // 1) Presigned URL 발급
+      const presignRes = await uploadsApi.presign(file.name, file.type || 'application/octet-stream');
+      const { uploadUrl, s3Key } = presignRes.data.data;
+
+      // 2) S3에 직접 업로드 (진행률 표시)
+      await uploadsApi.uploadToS3(uploadUrl, file, (percent) => setUploadPercent(percent));
+
+      if (purpose) {
+        // 사용 목적이 있으면 → 가중치 추천 화면으로 이동
+        navigate('/jobs/weights', {
+          state: {
+            s3Key,
+            originalFilename: file.name,
+            jobName: jobName || undefined,
+            purpose,
+          },
+        });
+      } else {
+        // 사용 목적이 없으면 → 바로 기본 가중치로 진단
+        await uploadsApi.startJob(s3Key, file.name, jobName || undefined);
         message.success('파일 업로드 성공! 진단이 시작됩니다.');
         navigate('/jobs');
-      } catch (err) {
-        message.error(getErrorMessage(err, '파일 업로드에 실패했습니다.'));
-      } finally {
-        setLoading(false);
       }
+    } catch (err) {
+      message.error(getErrorMessage(err, '파일 업로드에 실패했습니다.'));
+    } finally {
+      setLoading(false);
+      setUploadPercent(0);
     }
   };
 
@@ -77,6 +88,7 @@ export default function UploadPage() {
             onChange={({ fileList }) => setFileList(fileList.slice(-1))}
             maxCount={1}
             accept=".csv,.xlsx,.xls,.json"
+            disabled={loading}
           >
             <p className="ant-upload-drag-icon">
               <InboxOutlined />
@@ -87,6 +99,10 @@ export default function UploadPage() {
         </Form.Item>
       </Form>
 
+      {loading && uploadPercent > 0 && (
+        <Progress percent={uploadPercent} status="active" style={{ marginBottom: 16 }} />
+      )}
+
       <div style={{ marginTop: 24, textAlign: 'center' }}>
         <Button
           type="primary"
@@ -95,7 +111,7 @@ export default function UploadPage() {
           loading={loading}
           disabled={fileList.length === 0}
         >
-          업로드 및 진단 시작
+          {loading ? 'S3에 업로드 중...' : '업로드 및 진단 시작'}
         </Button>
       </div>
 

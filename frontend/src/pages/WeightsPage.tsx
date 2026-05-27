@@ -5,7 +5,7 @@ import { ExperimentOutlined } from '@ant-design/icons';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { weightsApi } from '../api/weights';
-import { jobsApi } from '../api/jobs';
+import { uploadsApi } from '../api/uploads';
 import { getErrorMessage } from '../utils/errorHandler';
 
 const { Title, Text, Paragraph } = Typography;
@@ -29,7 +29,8 @@ const DEFAULT_WEIGHTS: Record<string, number> = {
 };
 
 interface UploadState {
-  file: File;
+  s3Key: string;
+  originalFilename: string;
   jobName?: string;
   purpose?: string;
 }
@@ -77,7 +78,7 @@ export default function WeightsPage() {
     if (!uploadState) return;
     setLoading(true);
     try {
-      await jobsApi.submit(uploadState.file, uploadState.jobName, uploadState.purpose, useWeights);
+      await uploadsApi.startJob(uploadState.s3Key, uploadState.originalFilename, uploadState.jobName, uploadState.purpose, useWeights);
       message.success('맞춤 가중치로 진단이 시작되었습니다.');
       navigate('/jobs');
     } catch (err) {
