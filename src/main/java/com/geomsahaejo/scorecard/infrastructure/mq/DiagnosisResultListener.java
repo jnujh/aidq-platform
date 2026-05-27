@@ -60,7 +60,14 @@ public class DiagnosisResultListener {
 
         log.info("[MQ] 진단 완료 처리 - jobId: {}, score: {}", job.getId(), message.totalScore());
 
-        // 4) LLM ��포트 자동 생성
+        // 4) 원본 파일 S3에서 삭제 (비용 절감 — 진단 완료 후 원본 불필요)
+        try {
+            s3Uploader.delete(job.getS3Key());
+        } catch (Exception e) {
+            log.warn("[S3] 원본 파일 삭제 실패 (진단 결과에는 영향 없음) - key: {}", job.getS3Key(), e);
+        }
+
+        // 5) LLM 리포트 자동 생성
         try {
             String report = llmService.generateReport(message.resultDetail(), job.getPurpose());
             if (report != null) {
@@ -71,7 +78,7 @@ public class DiagnosisResultListener {
                 log.info("[LLM] 리포트 생성 완료 - jobId: {}", job.getId());
             }
         } catch (Exception e) {
-            log.warn("[LLM] ���포트 생성 실패 (진단 결과는 정상 저장됨) - jobId: {}", job.getId(), e);
+            log.warn("[LLM] 리포트 생성 실패 (진단 결과는 정상 저장됨) - jobId: {}", job.getId(), e);
         }
     }
 

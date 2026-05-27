@@ -9,6 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
@@ -97,6 +98,14 @@ public class S3Uploader {
 
         log.info("Presigned URL 생성 완료: bucket={}, key={}", s3Properties.bucket(), s3Key);
         return new PresignedUploadResult(presigned.url().toString(), s3Key);
+    }
+
+    public void delete(String key) {
+        s3Client.deleteObject(DeleteObjectRequest.builder()
+                .bucket(s3Properties.bucket())
+                .key(key)
+                .build());
+        log.info("S3 파일 삭제 완료: bucket={}, key={}", s3Properties.bucket(), key);
     }
 
     public record PresignedUploadResult(String uploadUrl, String s3Key) {}
