@@ -63,6 +63,15 @@ def parse_context(purpose: str) -> dict:
 
     response_text = response.content[0].text.strip()
 
+    # Claude가 ```json ... ``` 으로 감싸는 경우 벗겨냄
+    if response_text.startswith("```"):
+        lines = response_text.split("\n")
+        if lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        response_text = "\n".join(lines).strip()
+
     try:
         parsed = json.loads(response_text)
         return {

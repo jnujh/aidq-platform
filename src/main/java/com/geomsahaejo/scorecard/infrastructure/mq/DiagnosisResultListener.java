@@ -2,6 +2,7 @@ package com.geomsahaejo.scorecard.infrastructure.mq;
 
 import com.geomsahaejo.scorecard.infrastructure.llm.LlmService;
 import com.geomsahaejo.scorecard.infrastructure.s3.S3Uploader;
+import com.geomsahaejo.scorecard.infrastructure.sse.SseEmitterRepository;
 import com.geomsahaejo.scorecard.job.DataType;
 import com.geomsahaejo.scorecard.job.Job;
 import com.geomsahaejo.scorecard.job.JobRepository;
@@ -13,6 +14,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+import java.io.IOException;
+import java.util.Map;
 
 @Slf4j
 @Component
@@ -23,6 +28,7 @@ public class DiagnosisResultListener {
     private final JobResultRepository jobResultRepository;
     private final S3Uploader s3Uploader;
     private final LlmService llmService;
+    private final SseEmitterRepository sseEmitterRepository;
 
     @RabbitListener(queues = RabbitMQConfig.RESULT_QUEUE)
     @Transactional
@@ -60,7 +66,7 @@ public class DiagnosisResultListener {
 
         log.info("[MQ] 진단 완료 처리 - jobId: {}, score: {}", job.getId(), message.totalScore());
 
-        // 4) 원본 파일 S3에서 삭제 (비용 절감 — 진단 완료 후 원본 불필요)
+        // 4) 원본 파일 S3에서 삭제 (비용 절감)
         try {
             s3Uploader.delete(job.getS3Key());
         } catch (Exception e) {
@@ -80,6 +86,9 @@ public class DiagnosisResultListener {
         } catch (Exception e) {
             log.warn("[LLM] 리포트 생성 실패 (진단 결과는 정상 저장됨) - jobId: {}", job.getId(), e);
         }
+
+        // 6) SSE로 사용자에게 작업 완료 알림 (모든 처리 완료 후 전송)
+        notifyUser(job);
     }
 
     private void handleFailure(Job job, DiagnosisResultMessage message) {
@@ -87,5 +96,27 @@ public class DiagnosisResultListener {
         jobRepository.save(job);
 
         log.warn("[MQ] 진단 실패 처리 - jobId: {}, reason: {}", job.getId(), message.errorMessage());
+
+        notifyUser(job);
+    }
+
+    private void notifyUser(Job job) {
+        sseEmitterRepository.get(job.getUserId()).ifPresent(emitter -> {
+            try {
+                Map<String, Object> eventData = new java.util.HashMap<>();
+                eventData.put("jobId", job.getId());
+                eventData.put("status", job.getStatus().name());
+                if (job.getDataType() != null) {
+                    eventData.put("dataType", job.getDataType().name());
+                }
+                emitter.send(SseEmitter.event()
+                        .name("job-update")
+                        .data(eventData));
+                log.info("[SSE] 작업 상태 전송 - jobId: {}, status: {}", job.getId(), job.getStatus());
+            } catch (IOException e) {
+                sseEmitterRepository.remove(job.getUserId());
+                log.warn("[SSE] 이벤트 전송 실패 - userId: {}", job.getUserId(), e);
+            }
+        });
     }
 }

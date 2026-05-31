@@ -53,8 +53,9 @@ public class SecurityConfig {
 
             // 화이트리스트 설정
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.POST, "/api/users/signup").permitAll() 
-                .requestMatchers(HttpMethod.POST, "/api/users/login").permitAll()    
+                .requestMatchers(HttpMethod.POST, "/api/users/signup").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/users/login").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/jobs/subscribe").permitAll()
                 .anyRequest().authenticated()
             )
 

@@ -1,8 +1,9 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Table, Tag, Typography, Empty, Button, Popconfirm, message } from 'antd';
 import { DeleteOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { jobsApi, type JobStatusResponse } from '../api/jobs';
+import { subscribeJobUpdates } from '../api/sse';
 
 const { Text } = Typography;
 
@@ -17,14 +18,13 @@ export default function JobsPage() {
   const navigate = useNavigate();
   const [jobs, setJobs] = useState<JobStatusResponse[]>([]);
   const [loading, setLoading] = useState(true);
-  const intervalRef = useRef<number | null>(null);
 
   const fetchJobs = useCallback(async () => {
     try {
       const res = await jobsApi.getList();
       setJobs(res.data.data);
     } catch {
-      // 에러 무시 (폴링 중 일시적 에러 가능)
+      // 에러 무시
     } finally {
       setLoading(false);
     }
@@ -41,6 +41,9 @@ export default function JobsPage() {
     }
   };
 
+  const unsubscribeRef = useRef<(() => void) | null>(null);
+
+  // 초기 목록 로드
   useEffect(() => {
     const loadJobs = async () => {
       try {
@@ -55,22 +58,47 @@ export default function JobsPage() {
     loadJobs();
   }, []);
 
+  // SSE 구독 관리: pending 작업 유무에 따라 연결/해제
   useEffect(() => {
     const hasPending = jobs.some(
       (job) => job.status === 'PENDING' || job.status === 'PROCESSING'
     );
 
-    if (hasPending) {
-      intervalRef.current = window.setInterval(fetchJobs, 3000);
+    if (hasPending && !unsubscribeRef.current) {
+      // 진행 중인 작업이 있고 아직 구독 안 했으면 → 구독 시작
+      unsubscribeRef.current = subscribeJobUpdates(
+        (event) => {
+          // SSE 데이터로 로컬 상태 즉시 업데이트
+          setJobs((prev) =>
+            prev.map((job) =>
+              job.jobId === event.jobId
+                ? { ...job, status: event.status, dataType: event.dataType ?? job.dataType }
+                : job
+            )
+          );
+        },
+        () => {
+          // SSE 에러 시 구독 해제 후 재시도
+          unsubscribeRef.current = null;
+          fetchJobs();
+        }
+      );
+    } else if (!hasPending && unsubscribeRef.current) {
+      // 모든 작업 완료 → 구독 해제
+      unsubscribeRef.current();
+      unsubscribeRef.current = null;
     }
+  }, [jobs, fetchJobs]);
 
+  // 컴포넌트 언마운트 시 정리
+  useEffect(() => {
     return () => {
-      if (intervalRef.current !== null) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
       }
     };
-  }, [jobs, fetchJobs]);
+  }, []);
 
   const columns = [
     {
