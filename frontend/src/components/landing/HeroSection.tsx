@@ -1,6 +1,7 @@
 import { Button, Flex } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { BRAND } from '../../config/brand';
+import resultImage from '../../assets/re1.png';
 
 const stats = [
   { highlight: '8가지', label: '진단 지표' },
@@ -124,22 +125,19 @@ export default function HeroSection() {
           </Flex>
         </div>
 
-        <div
+        <img
+          src={resultImage}
+          alt="진단 결과 미리보기"
           style={{
             flex: 1,
+            minWidth: 0,
+            width: '100%',
             aspectRatio: '4 / 3',
-            background: '#f0f2f5',
+            objectFit: 'contain',
             borderRadius: 16,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#999',
-            fontSize: BRAND.fontSize.subtitle,
-            fontWeight: BRAND.fontWeight.semibold,
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.08)',
           }}
-        >
-          [이미지 자리]
-        </div>
+        />
       </Flex>
     </section>
   );
