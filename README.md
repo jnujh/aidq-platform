@@ -10,6 +10,7 @@
 - **RAG 기반 개선 리포트** — 진단 결과를 자연어로 해석하고 참조 문서와 함께 개선 방향 제시
 - **SSE 실시간 알림** — 폴링 없이 진단 완료 시 즉시 알림
 - **비동기 처리** — RabbitMQ 기반 메시지 큐로 진단 요청/결과 비동기 처리
+- **대용량 병렬 진단** — Celery chord로 CSV를 청크 분할 → Worker 병렬 진단 → 합산 (OOM 없는 스트리밍, Spring Boot 변경 0)
 
 ## 아키텍처
 
@@ -22,10 +23,14 @@
                     ↙        ↘         ↓
           diagnosis.queue   result.queue  [ChromaDB] + [Claude Haiku]
                 ↓                ↑
-          [Python Worker — DSC Engine v3.2]
+          [Bridge → Celery chord 병렬 진단 (DSC v3.2)]  ←→ [Redis]
+            분할 → process_chunk × N → 합산
                          ↓
                        [S3]
 ```
+
+> 소용량(<32MB)은 단건 처리, 대용량은 256MB 청크로 스트리밍 분할 후 chord 병렬 진단.
+> 결과 메시지 형식은 기존과 동일해 Spring Boot 변경 없음.
 
 ## 기술 스택
 
@@ -37,6 +42,7 @@
 | Message Queue | RabbitMQ 3 |
 | Object Storage | AWS S3 (로컬: LocalStack) |
 | 진단 엔진 | Python 3.11, DSC Engine v3.2 (pandas, scipy) |
+| 병렬 처리 | Celery 5.4 (chord/group), Redis 7 (result backend) |
 | RAG | ChromaDB, LangChain, sentence-transformers (all-MiniLM-L6-v2) |
 | LLM | Claude Haiku (Anthropic API) |
 | 실시간 통신 | SSE (Server-Sent Events) |
@@ -96,8 +102,9 @@ docker compose up -d
 | MySQL | 3306 | 데이터베이스 |
 | RabbitMQ | 5672, 15672 | 메시지 큐 (15672: 관리 UI, guest/guest) |
 | LocalStack | 4566 | 로컬 S3 대체 |
+| Redis | 6379 | Celery result backend (병렬 부분결과 수집) |
 | RAG Service | 8001 | RAG 가중치 추천 + LLM 리포트 |
-| Engine | - | DSC 진단 워커 (RabbitMQ 통신) |
+| Engine | - | DSC 진단 워커 (Celery Worker + Bridge) |
 
 ### Step 3: RAG 인덱싱 (최초 1회)
 
@@ -152,9 +159,14 @@ scorecard/
 │       ├── pages/      # 페이지 컴포넌트
 │       ├── components/ # 공통 컴포넌트
 │       └── stores/     # 인증 상태 관리
-├── engine/                         # DSC 진단 엔진
-│   ├── dsc_engine.py   # 8개 품질 지표 계산
-│   └── worker.py       # RabbitMQ Consumer
+├── engine/                         # DSC 진단 엔진 (Celery 병렬)
+│   ├── dsc_engine.py   # 8개 품질 지표 + 청크별 부분 지표 계산
+│   ├── celery_app.py   # Celery 앱 설정 (broker=RabbitMQ, backend=Redis)
+│   ├── partitioner.py  # 스트리밍 분할 + reservoir 샘플링
+│   ├── aggregator.py   # 부분 결과 합산 → 최종 점수
+│   ├── tasks.py        # Celery 태스크 (coordinator/process_chunk/aggregate)
+│   ├── bridge.py       # pika → Celery 브릿지
+│   └── worker.py       # (레거시) 단일 RabbitMQ Consumer — 폴백
 ├── rag-service/                    # RAG 서비스 (FastAPI)
 │   ├── rag/
 │   │   ├── retriever.py   # ChromaDB 벡터 검색
