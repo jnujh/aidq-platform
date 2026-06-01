@@ -19,13 +19,19 @@ REDIS_PORT = int(os.getenv('REDIS_PORT', '6379'))
 BROKER_URL = f'amqp://{RABBITMQ_USER}:{RABBITMQ_PASS}@{RABBITMQ_HOST}:{RABBITMQ_PORT}//'
 RESULT_BACKEND = f'redis://{REDIS_HOST}:{REDIS_PORT}/0'
 
-app = Celery('scorecard_engine', broker=BROKER_URL, backend=RESULT_BACKEND)
+# include=['tasks']: 워커 기동 시 tasks 모듈을 명시 import → 태스크 등록
+# (단일 모듈 레이아웃이라 autodiscover_tasks는 부적합)
+app = Celery('scorecard_engine', broker=BROKER_URL, backend=RESULT_BACKEND,
+             include=['tasks'])
 
 app.conf.update(
     # 직렬화: Spring Boot와의 메시지는 Bridge가 처리하므로 내부 태스크는 json으로 통일
     task_serializer='json',
     result_serializer='json',
     accept_content=['json'],
+
+    # RabbitMQ가 늦게 떠도 기동 시 재연결 대기 (Celery 5.x 기본 비활성)
+    broker_connection_retry_on_startup=True,
 
     # ACK 정책: 태스크 완료 후 ACK + worker 사망 시 재큐 (대용량 청크 유실 방지)
     task_acks_late=True,
@@ -42,6 +48,3 @@ app.conf.update(
     # 결과 만료: chord 집계 후 Redis에 남은 부분결과 1시간 뒤 정리
     result_expires=3600,
 )
-
-# tasks.py가 import 시점에 태스크를 등록하도록 보장
-app.autodiscover_tasks(['tasks'])

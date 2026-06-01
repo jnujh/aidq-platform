@@ -97,6 +97,13 @@ public class DiagnosisResultListener {
 
         log.warn("[MQ] 진단 실패 처리 - jobId: {}, reason: {}", job.getId(), message.errorMessage());
 
+        // 실패 시에도 원본 파일 S3에서 삭제 (비용 누수 방지 — 재진단은 재업로드 방식이라 무손실)
+        try {
+            s3Uploader.delete(job.getS3Key());
+        } catch (Exception e) {
+            log.warn("[S3] 실패 작업 원본 삭제 실패 (처리에는 영향 없음) - key: {}", job.getS3Key(), e);
+        }
+
         notifyUser(job);
     }
 

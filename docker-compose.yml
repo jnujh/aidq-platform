@@ -45,6 +45,14 @@ services:
       - "./infra/localstack/init-s3.sh:/etc/localstack/init/ready.d/init-s3.sh"
     restart: always
 
+  # ───── Redis (Celery result backend) ─────
+  redis:
+    container_name: scorecard-redis
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    restart: always
+
   # ───── RAG Service (FastAPI) ─────
   rag:
     container_name: scorecard-rag
@@ -73,9 +81,12 @@ services:
       AWS_REGION: ap-northeast-2
       AWS_ACCESS_KEY_ID: test
       AWS_SECRET_ACCESS_KEY: test
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     depends_on:
       - rabbitmq
       - s3
+      - redis
     restart: always
 
 # ───── Named Volumes 선언 ─────

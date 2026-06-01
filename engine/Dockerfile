@@ -4,6 +4,8 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY dsc_engine.py worker.py ./
+COPY celery_app.py partitioner.py aggregator.py tasks.py bridge.py dsc_engine.py worker.py ./
+COPY entrypoint.sh .
+RUN chmod +x entrypoint.sh
 
-CMD ["python", "-u", "worker.py"]
+CMD ["./entrypoint.sh"]
