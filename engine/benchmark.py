@@ -102,6 +102,18 @@ def _load_results() -> list:
     return [json.loads(line) for line in raw.splitlines() if line.strip()]
 
 
+def _read_timing(job_id) -> dict:
+    """코디네이터가 Redis(db=1)에 기록한 직렬 준비시간 등. 없으면 빈 dict."""
+    try:
+        import redis
+        r = redis.Redis(host=os.getenv('REDIS_HOST', 'redis'),
+                        port=int(os.getenv('REDIS_PORT', '6379')), db=1)
+        raw = r.get(f'bench:timing:{job_id}')
+        return json.loads(raw) if raw else {}
+    except Exception:
+        return {}
+
+
 # ── 2) 워커 수별 측정 ──
 def _connect():
     return pika.BlockingConnection(pika.ConnectionParameters(
@@ -129,7 +141,13 @@ def _dispatch_and_wait(ch, result_queue, job_id, s3_key) -> dict:
         if str(msg.get('jobId')) != str(job_id):
             continue  # 다른 job 결과 (이론상 없음 — 순차 측정)
         elapsed = time.time() - t0
+        timing = _read_timing(job_id)
+        serial = timing.get('serial_prep_s')
+        # compute-only = end-to-end − 직렬 준비(경계탐색+샘플+전역통계). 단일 클럭(여기) 기준이라 정확.
+        compute = round(elapsed - serial, 2) if serial is not None else None
         return {'elapsed': round(elapsed, 2),
+                'serial_prep_s': serial, 'compute_s': compute,
+                'n_ranges': timing.get('n_ranges'),
                 'success': bool(msg.get('success')),
                 'score': msg.get('totalScore'),
                 'error': msg.get('errorMessage')}
@@ -153,7 +171,12 @@ def run(workers: int):
         r = _dispatch_and_wait(ch, tmp, job_id, key)
         record = {'workers': workers, 'rows': rows, 'jobId': job_id, **r}
         _append_result(record)
-        status = f'{r["elapsed"]}s, score={r["score"]}' if r['success'] else f'실패: {r["error"]}'
+        if r['success']:
+            extra = (f', 직렬{r["serial_prep_s"]}s/compute{r["compute_s"]}s'
+                     if r.get('serial_prep_s') is not None else '')
+            status = f'{r["elapsed"]}s, score={r["score"]}{extra}'
+        else:
+            status = f'실패: {r["error"]}'
         print(f'    → {status}')
     conn.close()
     print('측정 완료 → S3 결과 누적.')
@@ -206,12 +229,37 @@ def plot():
     p2 = os.path.join(OUT_DIR, 'speedup.png')
     plt.savefig(p2, dpi=120, bbox_inches='tight'); plt.close()
 
+    paths = [p1, p2]
+
+    # 차트 3: compute-only speedup (직렬 준비 제외 → 순수 병렬 진단 speedup, 직렬 분할 제거 효과 입증)
+    def compute_of(w, rows):
+        vals = [r.get('compute_s') for r in records
+                if r['workers'] == w and r['rows'] == rows and r.get('compute_s') is not None]
+        return min(vals) if vals else None
+
+    if any(r.get('compute_s') is not None for r in records):
+        plt.figure(figsize=(8, 5))
+        for rows in row_sizes:
+            base = compute_of(1, rows)
+            if not base:
+                continue
+            ys = [base / compute_of(w, rows) if compute_of(w, rows) else None
+                  for w in worker_counts]
+            plt.plot(worker_counts, ys, marker='o', label=f'{rows // 1000}K rows')
+        plt.plot(worker_counts, worker_counts, '--', color='gray', label='ideal (linear)')
+        plt.xlabel('Workers'); plt.ylabel('Compute-only speedup')
+        plt.title('Compute-only speedup (serial prep excluded)')
+        plt.legend(); plt.grid(True, alpha=0.3)
+        p3 = os.path.join(OUT_DIR, 'speedup_compute.png')
+        plt.savefig(p3, dpi=120, bbox_inches='tight'); plt.close()
+        paths.append(p3)
+
     # S3 업로드 (보존)
     s3 = get_s3_client()
-    for p in (p1, p2):
+    for p in paths:
         with open(p, 'rb') as f:
             s3.put_object(Bucket=S3_BUCKET, Key=f'benchmark/{os.path.basename(p)}', Body=f.read())
-    print(f'차트 저장: {p1}, {p2} (+ S3 benchmark/)')
+    print(f'차트 저장: {", ".join(paths)} (+ S3 benchmark/)')
     print(f'호스트 복사: docker cp <engine-container>:{OUT_DIR} ./docs/benchmark')
 
 
