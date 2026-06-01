@@ -20,8 +20,13 @@ import pandas as pd
 from dsc_engine import auto_detect_columns
 
 # 기본 256MB/32MB. 환경변수로 오버라이드 가능 (테스트·벤치마크에서 청크 크기 조절용)
-TARGET_CHUNK_SIZE = int(os.getenv('TARGET_CHUNK_SIZE_BYTES', 256 * 1024 * 1024))  # 청크당 목표 크기
-MIN_CHUNK_SIZE = int(os.getenv('MIN_CHUNK_SIZE_BYTES', 32 * 1024 * 1024))         # 이 미만은 분할 안 함
+# compose의 ${VAR:-}는 미설정 시 빈 문자열을 주입하므로, 빈 값도 기본값으로 처리한다.
+def _env_int(name, default):
+    val = os.getenv(name)
+    return int(val) if val else default
+
+TARGET_CHUNK_SIZE = _env_int('TARGET_CHUNK_SIZE_BYTES', 256 * 1024 * 1024)  # 청크당 목표 크기
+MIN_CHUNK_SIZE = _env_int('MIN_CHUNK_SIZE_BYTES', 32 * 1024 * 1024)         # 이 미만은 분할 안 함
 MAX_SAMPLE_ROWS = 400_000               # 샘플 상한 (메모리 ~160MB, Q1/Q3 오차 ~0.16%)
 PART_FLUSH_SIZE = 5 * 1024 * 1024       # 5MB — S3 Multipart 최소 파트 크기
 

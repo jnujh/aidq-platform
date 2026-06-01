@@ -66,8 +66,8 @@ services:
     restart: always
 
   # ───── DSC 진단 엔진 (Python Worker) ─────
+  # container_name 미지정: docker compose up --scale engine=N 으로 워커 수평 확장 가능
   engine:
-    container_name: scorecard-engine
     build:
       context: ./engine
       dockerfile: Dockerfile
@@ -83,6 +83,9 @@ services:
       AWS_SECRET_ACCESS_KEY: test
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      # 벤치마크용 청크 크기 오버라이드 (미지정 시 partitioner.py 기본 256MB/32MB)
+      TARGET_CHUNK_SIZE_BYTES: ${TARGET_CHUNK_SIZE_BYTES:-}
+      MIN_CHUNK_SIZE_BYTES: ${MIN_CHUNK_SIZE_BYTES:-}
     depends_on:
       - rabbitmq
       - s3

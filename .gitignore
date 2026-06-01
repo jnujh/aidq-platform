@@ -84,3 +84,5 @@ test_data/
 CLAUDE.md
 docs/
 .githooks/
+.omc/
+.claude/
