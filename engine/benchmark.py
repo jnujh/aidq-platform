@@ -183,10 +183,51 @@ def run(workers: int):
 
 
 # ── 3) 시각화 ──
-def plot():
+# ── 시각화 스타일 (디자인 레퍼런스 매칭의 단일 변경 지점) ──
+# 레퍼런스 이미지를 받으면 아래 STYLE 값(색·폰트·크기)만 갈아끼우면 전 차트에 반영된다.
+STYLE = {
+    'font_family': 'NanumGothic',   # 한글 폰트 (엔진 이미지에 fonts-nanum 설치)
+    'palette': ['#2563EB', '#16A34A', '#F59E0B', '#DC2626', '#7C3AED', '#0891B2'],  # 시리즈 색
+    'ideal_color': '#9CA3AF',       # 이상선(점선)
+    'bg': '#FFFFFF',
+    'grid_alpha': 0.3,
+    'figsize': (8, 5),
+    'dpi': 150,
+    'title_size': 14,
+    'label_size': 11,
+    'marker': 'o',
+}
+
+
+def _setup_style():
+    """matplotlib 전역 스타일 적용 후 plt 반환. STYLE 단일 지점에서 제어."""
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
+    from cycler import cycler
+    # 폰트가 없는 환경(로컬 등)에서도 죽지 않도록: 설치돼 있으면 한글 폰트, 아니면 기본
+    from matplotlib.font_manager import findfont, FontProperties
+    fam = STYLE['font_family']
+    try:
+        findfont(FontProperties(family=fam), fallback_to_default=False)
+    except Exception:
+        fam = plt.rcParams['font.family']  # 폰트 미설치 → 기본(영문) 유지
+        print(f"[plot] '{STYLE['font_family']}' 폰트 미발견 → 기본 폰트 사용(한글 깨질 수 있음)")
+    plt.rcParams.update({
+        'font.family': fam,
+        'axes.unicode_minus': False,                 # 한글 폰트 음수기호 깨짐 방지
+        'figure.facecolor': STYLE['bg'],
+        'axes.facecolor': STYLE['bg'],
+        'axes.prop_cycle': cycler(color=STYLE['palette']),
+        'axes.titlesize': STYLE['title_size'],
+        'axes.labelsize': STYLE['label_size'],
+        'figure.dpi': STYLE['dpi'],
+    })
+    return plt
+
+
+def plot():
+    plt = _setup_style()
 
     records = [r for r in _load_results() if r.get('success') and r.get('elapsed')]
     if not records:
@@ -201,33 +242,33 @@ def plot():
         vals = [r['elapsed'] for r in records if r['workers'] == w and r['rows'] == rows]
         return min(vals) if vals else None  # 동일 조건 중복 측정 시 최선값
 
-    # 차트 1: 데이터 크기별 처리시간 (워커 수별 라인). slim 이미지에 한글 폰트가 없어 라벨은 영문.
-    plt.figure(figsize=(8, 5))
+    # 차트 1: 데이터 크기별 처리시간 (워커 수별 라인)
+    plt.figure(figsize=STYLE['figsize'])
     for w in worker_counts:
         ys = [elapsed_of(w, rows) for rows in row_sizes]
-        plt.plot([r // 1000 for r in row_sizes], ys, marker='o', label=f'{w} worker(s)')
-    plt.xlabel('Data size (K rows)')
-    plt.ylabel('Processing time (s)')
-    plt.title('Diagnosis time by data size (per worker count)')
-    plt.legend(); plt.grid(True, alpha=0.3)
+        plt.plot([r // 1000 for r in row_sizes], ys, marker=STYLE['marker'], label=f'{w} 워커')
+    plt.xlabel('데이터 크기 (K행)')
+    plt.ylabel('처리 시간 (초)')
+    plt.title('데이터 크기별 진단 시간 (워커 수별)')
+    plt.legend(); plt.grid(True, alpha=STYLE['grid_alpha'])
     p1 = os.path.join(OUT_DIR, 'time_by_size.png')
-    plt.savefig(p1, dpi=120, bbox_inches='tight'); plt.close()
+    plt.savefig(p1, dpi=STYLE['dpi'], bbox_inches='tight'); plt.close()
 
     # 차트 2: 워커 수별 speedup = T(1)/T(N) (데이터 크기별 라인 + Amdahl 이상선)
-    plt.figure(figsize=(8, 5))
+    plt.figure(figsize=STYLE['figsize'])
     for rows in row_sizes:
         base = elapsed_of(1, rows)
         if not base:
             continue
         ys = [base / elapsed_of(w, rows) if elapsed_of(w, rows) else None
               for w in worker_counts]
-        plt.plot(worker_counts, ys, marker='o', label=f'{rows // 1000}K rows')
-    plt.plot(worker_counts, worker_counts, '--', color='gray', label='ideal (linear)')
-    plt.xlabel('Workers'); plt.ylabel('Speedup (T1 / TN)')
-    plt.title('Speedup by worker count (per data size)')
-    plt.legend(); plt.grid(True, alpha=0.3)
+        plt.plot(worker_counts, ys, marker=STYLE['marker'], label=f'{rows // 1000}K행')
+    plt.plot(worker_counts, worker_counts, '--', color=STYLE['ideal_color'], label='이상 (선형)')
+    plt.xlabel('워커 수'); plt.ylabel('Speedup (T1 / TN)')
+    plt.title('워커 수별 Speedup (데이터 크기별)')
+    plt.legend(); plt.grid(True, alpha=STYLE['grid_alpha'])
     p2 = os.path.join(OUT_DIR, 'speedup.png')
-    plt.savefig(p2, dpi=120, bbox_inches='tight'); plt.close()
+    plt.savefig(p2, dpi=STYLE['dpi'], bbox_inches='tight'); plt.close()
 
     paths = [p1, p2]
 
@@ -238,20 +279,20 @@ def plot():
         return min(vals) if vals else None
 
     if any(r.get('compute_s') is not None for r in records):
-        plt.figure(figsize=(8, 5))
+        plt.figure(figsize=STYLE['figsize'])
         for rows in row_sizes:
             base = compute_of(1, rows)
             if not base:
                 continue
             ys = [base / compute_of(w, rows) if compute_of(w, rows) else None
                   for w in worker_counts]
-            plt.plot(worker_counts, ys, marker='o', label=f'{rows // 1000}K rows')
-        plt.plot(worker_counts, worker_counts, '--', color='gray', label='ideal (linear)')
-        plt.xlabel('Workers'); plt.ylabel('Compute-only speedup')
-        plt.title('Compute-only speedup (serial prep excluded)')
-        plt.legend(); plt.grid(True, alpha=0.3)
+            plt.plot(worker_counts, ys, marker=STYLE['marker'], label=f'{rows // 1000}K행')
+        plt.plot(worker_counts, worker_counts, '--', color=STYLE['ideal_color'], label='이상 (선형)')
+        plt.xlabel('워커 수'); plt.ylabel('Compute 전용 Speedup')
+        plt.title('Compute 전용 Speedup (직렬 준비 제외)')
+        plt.legend(); plt.grid(True, alpha=STYLE['grid_alpha'])
         p3 = os.path.join(OUT_DIR, 'speedup_compute.png')
-        plt.savefig(p3, dpi=120, bbox_inches='tight'); plt.close()
+        plt.savefig(p3, dpi=STYLE['dpi'], bbox_inches='tight'); plt.close()
         paths.append(p3)
 
     # S3 업로드 (보존)
