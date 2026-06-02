@@ -26,7 +26,7 @@ from celery_app import app
 from partitioner import (MIN_CHUNK_SIZE, get_file_size, detect_encoding, read_header,
                          discover_byte_ranges, read_chunk_df, sample_rows_via_ranges,
                          compute_global_stats, detect_quoting, stream_csv_chunks,
-                         stats_from_sample_df, sample_via_streaming)
+                         stats_from_sample_df, sample_via_streaming, CountingS3)
 from dsc_engine import compute_dsc, auto_detect_columns, compute_partial_metrics
 from aggregator import merge_partial_results, build_result_message
 from worker import (get_s3_client, download_csv_from_s3, S3_BUCKET,
@@ -122,24 +122,30 @@ def run_diagnosis(self, message):
                                     'n_ranges': 1, 'file_mb': round(size/1024/1024, 1)})
             return
         print(f'  대용량 {size/1024/1024:.1f}MB → byte-range 분산')
-        enc = detect_encoding(s3, S3_BUCKET, s3_key)
-        header, header_end = read_header(s3, S3_BUCKET, s3_key, enc)
-        if detect_quoting(s3, S3_BUCKET, s3_key, size, header_end):
+        # 직렬 준비는 CountingS3로 감싸 '통독 안 함'(읽은 바이트 ≪ 파일크기)을 정량 측정
+        s3c = CountingS3(s3)
+        enc = detect_encoding(s3c, S3_BUCKET, s3_key)
+        header, header_end = read_header(s3c, S3_BUCKET, s3_key, enc)
+        if detect_quoting(s3c, S3_BUCKET, s3_key, size, header_end):
             print(f'  따옴표 감지 → byte-range 비안전: 단일 워커 스트리밍 폴백')
             _process_streaming(s3, job_id, s3_key, enc, weights)
             _record_timing(job_id, {'mode': 'streaming_fallback',
                                     'serial_prep_s': round(time.time() - t0, 3),
                                     'n_ranges': 1, 'file_mb': round(size/1024/1024, 1)})
             return
-        ranges = discover_byte_ranges(s3, S3_BUCKET, s3_key, size, header_end)
-        sample_rows = sample_rows_via_ranges(s3, S3_BUCKET, s3_key, size, header_end, enc)
+        ranges = discover_byte_ranges(s3c, S3_BUCKET, s3_key, size, header_end)
+        sample_rows = sample_rows_via_ranges(s3c, S3_BUCKET, s3_key, size, header_end, enc)
         global_stats = compute_global_stats(sample_rows, header, 0, enc)
         serial_prep_s = time.time() - t0  # 직렬 준비(통독X): 경계탐색+샘플+전역통계
+        read_ratio = s3c.bytes_read / size if size else 0
         _record_timing(job_id, {'serial_prep_s': round(serial_prep_s, 3),
                                 'n_ranges': len(ranges), 'sample_rows': len(sample_rows),
-                                'file_mb': round(size/1024/1024, 1)})
+                                'file_mb': round(size/1024/1024, 1),
+                                'serial_read_mb': round(s3c.bytes_read/1024/1024, 1),
+                                'read_ratio': round(read_ratio, 4)})
         print(f'  구간 {len(ranges)}개 (header_end={header_end}, sample={len(sample_rows)}행, '
-              f'직렬준비={serial_prep_s:.2f}s) → chord 디스패치')
+              f'직렬준비={serial_prep_s:.2f}s, 읽은바이트={s3c.bytes_read/1024/1024:.1f}MB'
+              f'/{size/1024/1024:.1f}MB={read_ratio:.1%}) → chord 디스패치')
         callback = aggregate_results.s(job_id, global_stats, weights) \
             .on_error(on_aggregate_error.s(job_id=job_id))
         chord(group(process_chunk.s(s3_key, start, end, header, enc, global_stats)

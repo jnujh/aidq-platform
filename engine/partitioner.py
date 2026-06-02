@@ -39,6 +39,31 @@ STREAM_CHUNK_ROWS = 200_000             # 스트리밍 폴백의 행단위 청�
 csv.field_size_limit(10 * 1024 * 1024)
 
 
+class CountingS3:
+    """직렬 준비 단계에서 읽은 바이트를 합산하는 S3 클라이언트 프록시.
+
+    '통독 안 함'(경계탐색+샘플의 읽은 바이트 ≪ 파일크기)을 정량 로깅·검증하기 위함.
+    Range GET은 요청 구간 길이를, 전체 GET은 ContentLength를 누적한다. head_object는 무시.
+    """
+    def __init__(self, s3):
+        self._s3 = s3
+        self.bytes_read = 0
+
+    def head_object(self, **kw):
+        return self._s3.head_object(**kw)
+
+    def get_object(self, **kw):
+        rng = kw.get('Range')
+        resp = self._s3.get_object(**kw)
+        if rng and rng.startswith('bytes='):
+            a, _, b = rng[len('bytes='):].partition('-')
+            if a and b:
+                self.bytes_read += int(b) - int(a) + 1
+        else:
+            self.bytes_read += int(resp.get('ContentLength', 0))
+        return resp
+
+
 def calc_grid_size(file_size_bytes: int) -> int:
     """예상 청크 수. file_size < MIN_CHUNK_SIZE면 1(분할 불필요 신호)."""
     if file_size_bytes < MIN_CHUNK_SIZE:
@@ -151,11 +176,12 @@ def sample_rows_via_ranges(s3, bucket, key, file_size, header_end, encoding,
     if data_size <= n_windows * window:
         offsets = [(header_end, file_size)]
     else:
+        # 윈도우는 raw 오프셋에서 바로 읽고 양끝 부분행을 버린다(아래 lines[1:-1]).
+        # 줄경계 스냅(_find_next_newline)은 불필요한 이중 읽기라 생략 → 직렬 읽기 반감.
         step = data_size // n_windows
         offsets = []
         for i in range(n_windows):
-            pos = header_end + i * step
-            start = header_end if i == 0 else _find_next_newline(s3, bucket, key, pos, file_size)
+            start = header_end + i * step
             end = min(start + window, file_size)
             if start < end:
                 offsets.append((start, end))
