@@ -19,6 +19,11 @@ services:
   rabbitmq:
     container_name: scorecard-rabbit
     image: rabbitmq:3-management
+    # 원격 워커 EC2가 붙을 수 있도록 5672 노출. ⚠️ guest는 localhost 전용이므로
+    # .env.prod의 RABBITMQ_USERNAME을 guest 이외로 설정(아래 DEFAULT_USER가 그 계정 생성).
+    ports:
+      - "5672:5672"
+      - "15672:15672"
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-guest}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
@@ -27,6 +32,15 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: always
+
+  # ───── Redis (Celery result backend) ─────
+  # 원격 워커가 chord 결과를 읽고/쓰므로 6379 노출 (보안그룹으로 워커 SG만 허용).
+  redis:
+    container_name: scorecard-redis
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
     restart: always
 
   # ───── Spring Boot Backend ─────
@@ -68,25 +82,9 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
     restart: always
 
-  # ───── DSC 진단 엔진 (Python Worker) ─────
-  engine:
-    container_name: scorecard-engine
-    build:
-      context: ./engine
-      dockerfile: Dockerfile
-    environment:
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_PORT: 5672
-      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-guest}
-      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
-      AWS_S3_BUCKET: ${AWS_S3_BUCKET}
-      AWS_REGION: ap-northeast-2
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-    restart: always
+  # ───── DSC 진단 엔진 (워커) ─────
+  # 워커는 서비스 EC2가 아니라 워커 전용 EC2에서 docker-compose.prod-worker.yml로 실행한다.
+  # (벤치마크 'N워커' 측정을 깔끔히 하기 위해 서비스 stack에는 워커를 두지 않음)
 
   # ───── React Frontend (Nginx) ─────
   frontend:
