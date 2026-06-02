@@ -25,7 +25,8 @@ from celery.exceptions import SoftTimeLimitExceeded
 from celery_app import app
 from partitioner import (MIN_CHUNK_SIZE, get_file_size, detect_encoding, read_header,
                          discover_byte_ranges, read_chunk_df, sample_rows_via_ranges,
-                         compute_global_stats)
+                         compute_global_stats, detect_quoting, stream_csv_chunks,
+                         stats_from_sample_df, sample_via_streaming)
 from dsc_engine import compute_dsc, auto_detect_columns, compute_partial_metrics
 from aggregator import merge_partial_results, build_result_message
 from worker import (get_s3_client, download_csv_from_s3, S3_BUCKET,
@@ -79,6 +80,30 @@ def _process_small_file(s3, job_id, s3_key, weights):
     print(f'[소용량 처리] jobId={job_id}, score={result["score"]}, grade={result["grade"]}')
 
 
+def _process_streaming(s3, job_id, s3_key, encoding, weights):
+    """byte-range 비안전(따옴표 내 줄바꿈) 대용량 파일의 단일-워커 폴백 (2-패스).
+
+    패스1: 파일 전체를 훑어 reservoir 표본으로 전역통계(컬럼·Q1/Q3·중복비율) 산출
+           → 첫 청크만 쓰면 편향되므로 byte-range의 흩뿌린 샘플과 동등한 대표성 확보.
+    패스2: 그 전역통계로 청크별 부분지표를 누적 → 기존 aggregator로 합산.
+    따옴표를 존중해 정확하고 OOM도 없으나, 단일 워커라 byte-range 병렬보다 느리다.
+    """
+    sample_df, total_rows = sample_via_streaming(s3, S3_BUCKET, s3_key, encoding)
+    if total_rows == 0:
+        raise ValueError('빈 파일(데이터 행 없음)')
+    global_stats = stats_from_sample_df(sample_df, encoding, total_rows)
+
+    partials = []
+    for chunk_df in stream_csv_chunks(s3, S3_BUCKET, s3_key, encoding):
+        partials.append(compute_partial_metrics(
+            chunk_df, global_stats['target_col'], global_stats['numerical_cols'],
+            global_stats['categorical_cols'], global_stats['quantiles']))
+    merged = merge_partial_results(partials, global_stats, weights)
+    _publish_result(build_result_message(job_id, merged, global_stats, total_rows))
+    print(f'[스트리밍 폴백] jobId={job_id}, score={merged["score"]}, '
+          f'grade={merged["grade"]}, rows={total_rows}, chunks={len(partials)}')
+
+
 @app.task(bind=True, name='tasks.run_diagnosis')
 def run_diagnosis(self, message):
     """Coordinator. Bridge가 호출. 소/대용량 분기 후 대용량은 byte-range chord."""
@@ -99,6 +124,13 @@ def run_diagnosis(self, message):
         print(f'  대용량 {size/1024/1024:.1f}MB → byte-range 분산')
         enc = detect_encoding(s3, S3_BUCKET, s3_key)
         header, header_end = read_header(s3, S3_BUCKET, s3_key, enc)
+        if detect_quoting(s3, S3_BUCKET, s3_key, size, header_end):
+            print(f'  따옴표 감지 → byte-range 비안전: 단일 워커 스트리밍 폴백')
+            _process_streaming(s3, job_id, s3_key, enc, weights)
+            _record_timing(job_id, {'mode': 'streaming_fallback',
+                                    'serial_prep_s': round(time.time() - t0, 3),
+                                    'n_ranges': 1, 'file_mb': round(size/1024/1024, 1)})
+            return
         ranges = discover_byte_ranges(s3, S3_BUCKET, s3_key, size, header_end)
         sample_rows = sample_rows_via_ranges(s3, S3_BUCKET, s3_key, size, header_end, enc)
         global_stats = compute_global_stats(sample_rows, header, 0, enc)

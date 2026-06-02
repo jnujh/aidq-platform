@@ -14,6 +14,7 @@ import csv
 import io
 import os
 
+import numpy as np
 import pandas as pd
 
 from dsc_engine import auto_detect_columns
@@ -30,6 +31,9 @@ MAX_SAMPLE_ROWS = 400_000               # 샘플 상한 (메모리 ~160MB, Q1/Q3
 BOUNDARY_PROBE = 1 * 1024 * 1024        # 경계 스냅 시 한 번에 읽는 윈도우 (줄바꿈 탐색용)
 SAMPLE_WINDOWS = 64                     # 전역 샘플을 위해 흩뿌릴 Range 개수
 SAMPLE_WINDOW_SIZE = 1 * 1024 * 1024    # 샘플 윈도우 1개 크기
+QUOTE_PROBE_WINDOWS = 8                  # 따옴표 감지용 흩뿌릴 Range 개수
+QUOTE_PROBE_SIZE = 256 * 1024           # 따옴표 감지 윈도우 1개 크기
+STREAM_CHUNK_ROWS = 200_000             # 스트리밍 폴백의 행단위 청크 크기 (메모리 상한)
 
 # csv 필드 길이 상한 해제 (대용량 텍스트 셀 대비)
 csv.field_size_limit(10 * 1024 * 1024)
@@ -172,23 +176,91 @@ def sample_rows_via_ranges(s3, bucket, key, file_size, header_end, encoding,
     return rows[:max_sample_rows]
 
 
-def compute_global_stats(sample_rows, header, total_rows, src_encoding):
-    """샘플로 전역 통계 산출. auto_detect_columns도 여기서 1회 수행(전역 컬럼 셋 확정).
+def detect_quoting(s3, bucket, key, file_size, header_end,
+                   n_windows=QUOTE_PROBE_WINDOWS, window=QUOTE_PROBE_SIZE) -> bool:
+    """본문에 따옴표(")가 있으면 True (→ byte-range 비안전, 스트리밍 폴백 필요).
 
-    샘플 DataFrame은 반드시 pd.read_csv(StringIO)로 만들어 Worker의 청크 읽기와
-    동일한 dtype 추론을 거친다 → 컬럼 판별 일치 (회귀 정확성의 핵심).
-    필드 수가 헤더와 다른 행은 제외(흩뿌린 샘플의 부분행 방어).
+    byte-range 분할은 '\\n'을 무조건 행 경계로 스냅하므로, 따옴표로 감싼 셀 안의
+    줄바꿈을 행 경계로 오인해 레코드를 찢는다(조용한 오답). 따옴표가 전혀 없으면
+    모든 '\\n'이 진짜 행 끝이라 분할이 안전하다.
+
+    보수적: 따옴표 안 줄바꿈만이 진짜 위험이지만, 표본만으로 그걸 정밀 판별할 수 없어
+    '따옴표 존재'만으로 우회한다. 또한 전수검사가 아닌 표본검사라 극히 드물게 흩뿌려진
+    단일 따옴표는 놓칠 수 있다(우리 합성/clean/dirty 데이터는 따옴표 0 → 영향 없음).
+    바이트 0x22는 utf-8/cp949 모두 멀티바이트 시퀀스에 등장하지 않아 인코딩 무관하게 안전.
     """
-    n_cols = len(header)
-    clean_rows = [r for r in sample_rows if len(r) == n_cols]
+    data_size = file_size - header_end
+    if data_size <= 0:
+        return False
+    if data_size <= n_windows * window:
+        offsets = [(header_end, file_size)]
+    else:
+        step = data_size // n_windows
+        offsets = [(header_end + i * step, min(header_end + i * step + window, file_size))
+                   for i in range(n_windows)]
+    for (start, end) in offsets:
+        resp = s3.get_object(Bucket=bucket, Key=key, Range=f'bytes={start}-{end - 1}')
+        data = resp['Body'].read()
+        resp['Body'].close()
+        if b'"' in data:
+            return True
+    return False
 
-    buf = io.StringIO()
-    w = csv.writer(buf)
-    w.writerow(header)
-    w.writerows(clean_rows)
-    buf.seek(0)
-    sample_df = pd.read_csv(buf)
 
+def stream_csv_chunks(s3, bucket, key, encoding, chunksize=STREAM_CHUNK_ROWS):
+    """S3 객체를 스트리밍으로 받아 pandas로 행단위 청크를 생성 (따옴표 존중, OOM 없음).
+
+    byte-range 비안전(따옴표 내 줄바꿈) 파일의 단일-워커 폴백 경로. 전체를 메모리에
+    올리지 않고 chunksize 행씩 끊어 읽으므로 대용량도 안전하게 처리한다(단, 단일 워커).
+    """
+    resp = s3.get_object(Bucket=bucket, Key=key)
+    body = resp['Body']
+    try:
+        for chunk in pd.read_csv(body, encoding=encoding, chunksize=chunksize):
+            yield chunk
+    finally:
+        body.close()
+
+
+def sample_via_streaming(s3, bucket, key, encoding, cap=MAX_SAMPLE_ROWS,
+                         chunksize=STREAM_CHUNK_ROWS):
+    """스트리밍으로 파일 전체를 훑어 대표 표본(reservoir, 최대 cap행)을 수집.
+
+    byte-range 비안전 파일의 전역통계용 — 첫 청크만 쓰면 편향되므로 reservoir
+    sampling(Algorithm R)으로 전 구간에서 균일 표본을 뽑는다. 메모리는 cap행으로 묶임.
+    파일이 cap행 이하면 전체를 그대로 보유 → 전역통계가 단일패스와 일치.
+    시드 고정으로 결정적.
+    """
+    rng = np.random.default_rng(42)
+    reservoir = None
+    n_seen = 0
+    for chunk in stream_csv_chunks(s3, bucket, key, encoding, chunksize):
+        chunk = chunk.reset_index(drop=True)
+        c = len(chunk)
+        if reservoir is None:
+            reservoir = chunk.iloc[:0].copy()
+        if len(reservoir) < cap:                      # 아직 채우는 중
+            take = min(c, cap - len(reservoir))
+            reservoir = pd.concat([reservoir, chunk.iloc[:take]], ignore_index=True)
+            remaining, base = chunk.iloc[take:], n_seen + take
+        else:
+            remaining, base = chunk, n_seen
+        if len(remaining) > 0 and len(reservoir) >= cap:   # 확률적 교체
+            idxs = base + np.arange(len(remaining)) + 1     # 포함 시점의 1-based 카운트
+            keep = rng.random(len(remaining)) < (cap / idxs)
+            pos = np.flatnonzero(keep)
+            if pos.size:
+                slots = rng.integers(0, cap, size=pos.size)
+                reservoir.iloc[slots] = remaining.iloc[pos].values
+        n_seen += c
+    return (reservoir if reservoir is not None else pd.DataFrame()), n_seen
+
+
+def stats_from_sample_df(sample_df, src_encoding, total_rows=0):
+    """샘플 DataFrame으로 전역 통계 산출 (byte-range 샘플·스트리밍 첫청크 공용).
+
+    auto_detect_columns로 전역 컬럼 셋을 확정하고 Q1/Q3·중복비율을 근사한다.
+    """
     target_col, numerical_cols, categorical_cols = auto_detect_columns(sample_df)
 
     quantiles = {}
@@ -209,3 +281,23 @@ def compute_global_stats(sample_rows, header, total_rows, src_encoding):
         'total_rows': total_rows,
         'encoding': src_encoding,
     }
+
+
+def compute_global_stats(sample_rows, header, total_rows, src_encoding):
+    """흩뿌린 샘플 행들로 전역 통계 산출 (byte-range 경로용).
+
+    샘플 DataFrame은 반드시 pd.read_csv(StringIO)로 만들어 Worker의 청크 읽기와
+    동일한 dtype 추론을 거친다 → 컬럼 판별 일치 (회귀 정확성의 핵심).
+    필드 수가 헤더와 다른 행은 제외(흩뿌린 샘플의 부분행 방어).
+    """
+    n_cols = len(header)
+    clean_rows = [r for r in sample_rows if len(r) == n_cols]
+
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(header)
+    w.writerows(clean_rows)
+    buf.seek(0)
+    sample_df = pd.read_csv(buf)
+
+    return stats_from_sample_df(sample_df, src_encoding, total_rows)
