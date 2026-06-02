@@ -51,7 +51,10 @@ function DashboardLayout() {
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Sider theme="light" breakpoint="lg" collapsedWidth={0}>
-        <div style={{ padding: '16px', fontWeight: 'bold', fontSize: '18px', textAlign: 'center', borderBottom: '1px solid #f0f0f0' }}>
+        <div
+          onClick={() => navigate('/')}
+          style={{ padding: '16px', fontWeight: 'bold', fontSize: '18px', textAlign: 'center', borderBottom: '1px solid #f0f0f0', cursor: 'pointer' }}
+        >
           Scorecard
         </div>
         <Menu

@@ -4,7 +4,9 @@ import LandingHeader from '../components/landing/LandingHeader';
 import HeroSection from '../components/landing/HeroSection';
 import PartnersSection from '../components/landing/PartnersSection';
 import ResearchBackedSection from '../components/landing/ResearchBackedSection';
+import ValidationSection from '../components/landing/ValidationSection';
 import PurposeComparisonSection from '../components/landing/PurposeComparisonSection';
+import PurposeUseCasesSection from '../components/landing/PurposeUseCasesSection';
 import UseCasesSection from '../components/landing/UseCasesSection';
 import SupportedDataSection from '../components/landing/SupportedDataSection';
 import PollutionDetectionSection from '../components/landing/PollutionDetectionSection';
@@ -46,7 +48,9 @@ export default function LandingPage() {
         <SectionFrame><HeroSection /></SectionFrame>
         <SectionFrame><PartnersSection /></SectionFrame>
         <SectionFrame><ResearchBackedSection /></SectionFrame>
+        <SectionFrame><ValidationSection /></SectionFrame>
         <SectionFrame id="service"><PurposeComparisonSection /></SectionFrame>
+        <SectionFrame><PurposeUseCasesSection /></SectionFrame>
         <SectionFrame><UseCasesSection /></SectionFrame>
         <SectionFrame><SupportedDataSection /></SectionFrame>
         <SectionFrame><PollutionDetectionSection /></SectionFrame>

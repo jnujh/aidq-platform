@@ -9,8 +9,8 @@ const { Text } = Typography;
 
 const menuItems = [
   { key: 'service', label: '서비스 소개' },
-  { key: 'metrics', label: '진단 항목' },
   { key: 'guide', label: '사용 가이드' },
+  { key: 'metrics', label: '진단 항목' },
   { key: 'cases', label: '고객 사례' },
 ];
 

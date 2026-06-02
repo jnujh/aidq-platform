@@ -1,25 +1,34 @@
 import { Flex } from 'antd';
-import { IconSparkles } from '@tabler/icons-react';
+import {
+  IconSparkles,
+  IconReportAnalytics,
+  IconTargetArrow,
+  IconWand,
+} from '@tabler/icons-react';
 import { BRAND } from '../../config/brand';
+import jobsScreenshot from '../../assets/jobs.png';
 
-function SparkleCircle({ size = 28 }: { size?: number }) {
-  return (
-    <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        background: BRAND.colors.primary,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexShrink: 0,
-      }}
-    >
-      <IconSparkles size={size * 0.55} color="#fff" stroke={2} />
-    </div>
-  );
-}
+const USAGES: Array<{
+  Icon: typeof IconReportAnalytics;
+  title: string;
+  body: string;
+}> = [
+  {
+    Icon: IconTargetArrow,
+    title: '목적을 이해해서 가중치를 조정합니다',
+    body: '분류·회귀·시계열 등 데이터의 쓰임새에 맞춰 8개 지표의 비중을 자동으로 다시 잡습니다.',
+  },
+  {
+    Icon: IconReportAnalytics,
+    title: 'RAG 기반 LLM 분석 리포트를 만듭니다',
+    body: '점수·세부 지표·이상 패턴을 종합해 사람이 읽기 좋은 진단·개선 가이드를 자동 생성합니다.',
+  },
+  {
+    Icon: IconWand,
+    title: '개선 액션을 우선순위로 제안합니다',
+    body: '결측·중복·이상치·라벨 불균형 등 발견한 문제를 영향이 큰 순서로 정리해 보여줍니다.',
+  },
+];
 
 export default function AIAssistantSection() {
   return (
@@ -43,204 +52,145 @@ export default function AIAssistantSection() {
               fontWeight: BRAND.fontWeight.semibold,
               color: BRAND.colors.primaryDark,
               margin: 0,
+              marginBottom: 10,
             }}
           >
-            물어보면 AI가 답해드립니다
+            AI를 이렇게 활용합니다
           </h2>
+          <p
+            style={{
+              fontSize: BRAND.fontSize.body,
+              color: '#666',
+              margin: 0,
+              lineHeight: 1.6,
+            }}
+          >
+            데이터를 업로드하면 AI가 진단 결과를 리포트 형태로 풀어서 알려드립니다.
+          </p>
         </div>
 
-        <div
-          style={{
-            maxWidth: 540,
-            margin: '0 auto',
-            background: '#fff',
-            border: '1px solid #f0f0f0',
-            borderRadius: 16,
-            padding: 24,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 16,
-          }}
-        >
-          {/* 헤더 */}
-          <Flex align="center" gap={10}>
-            <SparkleCircle size={28} />
-            <span
+        <Flex gap={28} wrap="wrap" align="stretch">
+          <div
+            style={{
+              flex: '1 1 480px',
+              minWidth: 0,
+              background: BRAND.colors.surfaces.subtle,
+              border: '1px solid #E8EEF5',
+              borderRadius: 16,
+              padding: 16,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <img
+              src={jobsScreenshot}
+              alt="작업 생성 화면 — 사용 목적 입력"
               style={{
-                fontSize: BRAND.fontSize.body,
-                fontWeight: BRAND.fontWeight.semibold,
-                color: BRAND.colors.primaryDark,
+                width: '100%',
+                height: 'auto',
+                borderRadius: 10,
+                boxShadow: '0 10px 28px rgba(4, 44, 83, 0.12)',
+                display: 'block',
               }}
-            >
-              Scorecard AI
-            </span>
-            <span
+            />
+            <div
               style={{
-                marginLeft: 'auto',
-                background: BRAND.colors.highlights.success.bg,
-                color: BRAND.colors.highlights.success.text,
+                marginTop: 12,
                 fontSize: 12,
-                fontWeight: BRAND.fontWeight.semibold,
-                padding: '3px 10px',
-                borderRadius: 999,
+                color: '#888',
+                textAlign: 'center',
               }}
             >
-              RAG 기반
-            </span>
-          </Flex>
-
-          <div style={{ height: 1, background: '#f0f0f0' }} />
-
-          {/* 사용자 메시지 (우측) */}
-          <Flex justify="flex-end" align="flex-end" gap={8}>
-            <div
-              style={{
-                background: BRAND.colors.primary,
-                color: '#fff',
-                fontSize: BRAND.fontSize.body,
-                lineHeight: 1.5,
-                padding: '10px 14px',
-                borderRadius: 14,
-                borderBottomRightRadius: 4,
-                maxWidth: '80%',
-              }}
-            >
-              이 데이터로 흠집 사과 분류 모델을 만들 거예요
+            "사용 목적" 한 줄만 적으면 LLM이 가중치와 진단 기준을 자동 조정합니다
             </div>
+          </div>
+
+          <Flex
+            vertical
+            gap={14}
+            style={{ flex: '1 1 380px', minWidth: 0 }}
+          >
+            {USAGES.map(({ Icon, title, body }) => (
+              <div
+                key={title}
+                style={{
+                  background: '#fff',
+                  border: '1px solid #E8EEF5',
+                  borderRadius: 14,
+                  padding: 18,
+                  display: 'flex',
+                  gap: 14,
+                }}
+              >
+                <div
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: '50%',
+                    background: BRAND.colors.surfaces.cardBlue,
+                    color: BRAND.colors.primary,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Icon size={18} stroke={2} />
+                </div>
+                <div>
+                  <div
+                    style={{
+                      fontSize: BRAND.fontSize.body,
+                      fontWeight: BRAND.fontWeight.semibold,
+                      color: BRAND.colors.primaryDark,
+                      marginBottom: 4,
+                    }}
+                  >
+                    {title}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: BRAND.fontSize.bodySmall,
+                      color: '#555',
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    {body}
+                  </div>
+                </div>
+              </div>
+            ))}
+
             <div
               style={{
-                width: 32,
-                height: 32,
-                borderRadius: '50%',
-                background: BRAND.colors.primaryDark,
-                color: '#fff',
+                marginTop: 4,
+                background: BRAND.colors.surfaces.cardBlue,
+                borderRadius: 12,
+                padding: '12px 14px',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 12,
-                fontWeight: BRAND.fontWeight.semibold,
-                flexShrink: 0,
-              }}
-            >
-              동훈
-            </div>
-          </Flex>
-
-          {/* AI 답변 (좌측) */}
-          <Flex justify="flex-start" align="flex-start" gap={8}>
-            <SparkleCircle size={32} />
-            <div
-              style={{
-                background: '#fff',
-                border: '1px solid #f0f0f0',
-                borderRadius: 14,
-                borderBottomLeftRadius: 4,
-                padding: 14,
-                maxWidth: '85%',
-                display: 'flex',
-                flexDirection: 'column',
                 gap: 10,
               }}
             >
-              <div
+              <IconSparkles
+                size={18}
+                color={BRAND.colors.primary}
+                stroke={2}
+              />
+              <span
                 style={{
-                  fontSize: BRAND.fontSize.body,
+                  fontSize: BRAND.fontSize.bodySmall,
                   fontWeight: BRAND.fontWeight.semibold,
                   color: BRAND.colors.primaryDark,
-                  lineHeight: 1.5,
                 }}
               >
-                이미지 분류 모델 학습용으로 분석했어요 🍎
-              </div>
-
-              <div
-                style={{
-                  fontSize: BRAND.fontSize.bodySmall,
-                  color: '#444',
-                  lineHeight: 1.6,
-                }}
-              >
-                현재{' '}
-                <span
-                  style={{
-                    background: BRAND.colors.highlights.warning.bg,
-                    color: BRAND.colors.highlights.warning.text,
-                    padding: '2px 6px',
-                    borderRadius: 4,
-                    fontWeight: BRAND.fontWeight.semibold,
-                  }}
-                >
-                  흠집 사과가 17%
-                </span>
-                로 부족해요. 이대로 학습하면 흠집을 잘 못 잡아낼 가능성이 높아요.
-              </div>
-
-              <div
-                style={{
-                  background: BRAND.colors.surfaces.subtle,
-                  borderRadius: 10,
-                  padding: 12,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 6,
-                  fontSize: BRAND.fontSize.bodySmall,
-                  color: '#333',
-                }}
-              >
-                <div>1. SMOTE로 흠집 클래스 보강</div>
-                <div>2. 중복 47장 제거</div>
-                <div>3. 라벨 정확도 검증</div>
-              </div>
-
-              <div style={{ fontSize: 12, color: '#888' }}>
-                적용 시{' '}
-                <span
-                  style={{
-                    color: BRAND.colors.highlights.success.icon,
-                    fontWeight: BRAND.fontWeight.semibold,
-                  }}
-                >
-                  +30점
-                </span>{' '}
-                상승 예상
-              </div>
+                RAG 기반 — 외부 지식과 결합한 맞춤 분석
+              </span>
             </div>
           </Flex>
-
-          {/* 액션 칩 */}
-          <Flex gap={8} justify="flex-start" style={{ marginLeft: 40 }}>
-            <button
-              type="button"
-              style={{
-                background: '#fff',
-                border: `1px solid ${BRAND.colors.primary}`,
-                color: BRAND.colors.primary,
-                fontSize: BRAND.fontSize.bodySmall,
-                fontWeight: BRAND.fontWeight.semibold,
-                padding: '8px 14px',
-                borderRadius: 999,
-                cursor: 'pointer',
-              }}
-            >
-              자동 개선 적용
-            </button>
-            <button
-              type="button"
-              style={{
-                background: '#fff',
-                border: '1px solid #d9d9d9',
-                color: '#444',
-                fontSize: BRAND.fontSize.bodySmall,
-                fontWeight: BRAND.fontWeight.semibold,
-                padding: '8px 14px',
-                borderRadius: 999,
-                cursor: 'pointer',
-              }}
-            >
-              상세 리포트
-            </button>
-          </Flex>
-        </div>
+        </Flex>
       </div>
     </section>
   );
