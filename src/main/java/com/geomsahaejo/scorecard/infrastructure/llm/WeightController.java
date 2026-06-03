@@ -13,9 +13,11 @@ public class WeightController {
 
     @PostMapping("/recommend")
     public ApiResponse<WeightRecommendation> recommend(@RequestBody WeightRequest request) {
-        WeightRecommendation recommendation = llmService.recommendWeights(request.purpose());
+        WeightRecommendation recommendation =
+                llmService.recommendWeights(request.purpose(), request.dataType());
         return ApiResponse.success(recommendation);
     }
 
-    public record WeightRequest(String purpose) {}
+    // dataType: 'image' | 'text' | 'tabular'(또는 null). 모달리티별 가중치 추천 라우팅.
+    public record WeightRequest(String purpose, String dataType) {}
 }
