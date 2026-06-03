@@ -110,6 +110,19 @@ def run_diagnosis(self, message):
     job_id = message['jobId']
     s3_key = message['s3Key']
     weights = message.get('weights') or None
+
+    # 비정형(image/text) 분기 — 정형 byte-range 경로와 분리. tabular/미지정은 기존 흐름.
+    # Spring은 camelCase('dataType')로 전송. 직접 테스트용 snake('data_type')도 허용.
+    data_type = (message.get('dataType') or message.get('data_type') or 'tabular').lower()
+    if data_type in ('image', 'text'):
+        from unstructured_tasks import run_image_diagnosis, run_text_diagnosis
+        print(f'[Coordinator] 비정형 분기: data_type={data_type}, jobId={job_id}, key={s3_key}')
+        if data_type == 'image':
+            run_image_diagnosis(message)
+        else:
+            run_text_diagnosis(message)
+        return
+
     print(f'[Coordinator] jobId={job_id}, key={s3_key}')
     t0 = time.time()
     try:

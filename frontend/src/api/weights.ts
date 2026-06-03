@@ -6,10 +6,10 @@ export interface WeightRecommendation {
 }
 
 export const weightsApi = {
-  recommend(purpose: string) {
+  recommend(purpose: string, dataType?: string) {
     return client.post<{ success: boolean; data: WeightRecommendation }>(
       '/api/weights/recommend',
-      { purpose }
+      { purpose, dataType }
     );
   },
 };

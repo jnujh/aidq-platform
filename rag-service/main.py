@@ -18,6 +18,7 @@ app = FastAPI(
 
 class WeightRecommendRequest(BaseModel):
     purpose: str
+    data_type: str | None = None  # 'tabular' | 'image' | 'text'. None → tabular
 
 
 class WeightRecommendResponse(BaseModel):
@@ -59,10 +60,11 @@ async def recommend_weights(request: WeightRecommendRequest):
         k=5,
     )
 
-    # A + G (Augmentation + Generation): 프롬프트 조합 + Claude 호출
+    # A + G (Augmentation + Generation): 프롬프트 조합 + Claude 호출 (모달리티 인식)
     result = generate_weights(
         purpose=request.purpose,
         search_results=search_results,
+        data_type=request.data_type,
     )
 
     return WeightRecommendResponse(

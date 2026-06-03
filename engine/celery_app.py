@@ -19,10 +19,11 @@ REDIS_PORT = int(os.getenv('REDIS_PORT', '6379'))
 BROKER_URL = f'amqp://{RABBITMQ_USER}:{RABBITMQ_PASS}@{RABBITMQ_HOST}:{RABBITMQ_PORT}//'
 RESULT_BACKEND = f'redis://{REDIS_HOST}:{REDIS_PORT}/0'
 
-# include=['tasks']: 워커 기동 시 tasks 모듈을 명시 import → 태스크 등록
+# include: 워커 기동 시 태스크 모듈을 명시 import → 태스크 등록
 # (단일 모듈 레이아웃이라 autodiscover_tasks는 부적합)
+# unstructured_tasks: 비정형(image/text) map-reduce 태스크
 app = Celery('scorecard_engine', broker=BROKER_URL, backend=RESULT_BACKEND,
-             include=['tasks'])
+             include=['tasks', 'unstructured_tasks'])
 
 app.conf.update(
     # 직렬화: Spring Boot와의 메시지는 Bridge가 처리하므로 내부 태스크는 json으로 통일

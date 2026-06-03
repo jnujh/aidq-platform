@@ -14,17 +14,10 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 
 WEIGHT_PROMPT = """You are a data quality expert for an AI-Ready data quality diagnosis platform.
 
-Our platform has exactly 8 quality metrics. You must recommend weights for these 8 metrics based on the user's data usage purpose.
+Our platform diagnoses {modality_label} data. You must recommend weights for the metrics listed below, based on the user's data usage purpose.
 
-## The 8 Metrics (these are fixed — recommend weights only for these)
-- completeness: Missing value ratio (how complete is the data)
-- uniqueness: Duplicate row ratio (how unique is the data)
-- validity: Type/format validity (are data formats correct)
-- consistency: Categorical expression uniformity (are representations consistent)
-- outlier_ratio: Outlier ratio (how many abnormal values exist)
-- class_balance: Class balance (is the target variable distribution balanced)
-- feature_correlation: High-correlation feature ratio (are features redundant)
-- value_accuracy: Value accuracy (are distributions reasonable)
+## The Metrics (these are fixed — recommend weights only for these)
+{metrics_block}
 
 ## Rules
 1. Each weight must be an integer between 0 and 100
@@ -44,14 +37,7 @@ Our platform has exactly 8 quality metrics. You must recommend weights for these
 ## Response Format (JSON only)
 {{
   "weights": {{
-    "completeness": <int>,
-    "uniqueness": <int>,
-    "validity": <int>,
-    "consistency": <int>,
-    "outlier_ratio": <int>,
-    "class_balance": <int>,
-    "feature_correlation": <int>,
-    "value_accuracy": <int>
+{weights_json_template}
   }},
   "reasoning": "<Markdown 형식의 한국어 추천 근거. 아래 형식을 반드시 따를 것>"
 }}
@@ -64,25 +50,91 @@ IMPORTANT: Do NOT use Markdown tables. Use lists instead.
 > 한 문장으로 이 가중치 배분의 핵심 전략을 설명
 
 ### 📊 가중치 배분
-(가중치 높은 순으로 8개 모두 나열. 아래 형식 그대로 사용:)
-- 🔴 **completeness** — 18점 (상)
-- 🔴 **class_balance** — 16점 (상)
-- 🟡 **validity** — 12점 (중)
+(가중치 높은 순으로 {metric_count}개 지표 모두 나열. 아래 형식 그대로 사용:)
+- 🔴 **(지표명)** — 18점 (상)
+- 🟡 **(지표명)** — 12점 (중)
 - ...
 
 (🔴=상(15+), 🟡=중(8~14), 🟢=하(0~7))
 
 ### 🔍 상세 근거
-(가중치 높은 순서대로 8개 지표 모두 설명. 아래 형식:)
+(가중치 높은 순서대로 {metric_count}개 지표 모두 설명. 아래 형식:)
 
-#### 🔴 completeness (18점)
+#### 🔴 (지표명) (점수)
 설명 2~3문장. 참조 문서 인용 시 "**문서 전체 이름**에 따르면..." 형식으로 볼드 처리.
 
-#### 🟡 validity (12점)
-설명 2~3문장.
-
-(이런 식으로 8개 지표를 빠짐없이 #### 소제목으로 작성)
+(이런 식으로 {metric_count}개 지표를 빠짐없이 #### 소제목으로 작성)
 """
+
+# 모달리티별 지표 레지스트리 — (설명, 사전등록 fallback 가중치 0~1).
+# 정형은 기존 v3.2 8종, 이미지/텍스트는 팀원 v5 cell의 10종(dsc_cells DEFAULT_WEIGHTS_*와 동일).
+METRIC_REGISTRY = {
+    "tabular": {
+        "label": "tabular (structured)",
+        "metrics": {
+            "completeness": "Missing value ratio (how complete is the data)",
+            "uniqueness": "Duplicate row ratio (how unique is the data)",
+            "validity": "Type/format validity (are data formats correct)",
+            "consistency": "Categorical expression uniformity",
+            "outlier_ratio": "Outlier ratio (how many abnormal values exist)",
+            "class_balance": "Class balance (target distribution balance)",
+            "feature_correlation": "High-correlation feature ratio (redundancy)",
+            "value_accuracy": "Value accuracy (are distributions reasonable)",
+        },
+        "fallback": {
+            "completeness": 0.20, "uniqueness": 0.15, "validity": 0.10,
+            "consistency": 0.10, "outlier_ratio": 0.10, "class_balance": 0.10,
+            "feature_correlation": 0.10, "value_accuracy": 0.15,
+        },
+    },
+    "image": {
+        "label": "image (classification)",
+        "metrics": {
+            "completeness_image": "Pixel masking ratio (black/missing pixels)",
+            "uniqueness": "Perceptual-hash duplicate ratio",
+            "validity": "Image load/decode success ratio",
+            "consistency": "Color mode + size uniformity",
+            "outlier_ratio": "Mean-intensity outlier ratio",
+            "class_balance": "Class balance across labels",
+            "feature_correlation": "ResNet18 embedding dimension redundancy",
+            "label_consistency": "k-NN embedding label agreement (chance-corrected)",
+            "feature_informativeness": "Embedding→label mutual information / H(Y)",
+            "sample_quality_image": "Blur (Laplacian var) + contrast (RMS) blend",
+        },
+        "fallback": {
+            "completeness_image": 0.15, "uniqueness": 0.10, "validity": 0.05,
+            "consistency": 0.05, "outlier_ratio": 0.05, "class_balance": 0.10,
+            "feature_correlation": 0.05, "label_consistency": 0.20,
+            "feature_informativeness": 0.10, "sample_quality_image": 0.15,
+        },
+    },
+    "text": {
+        "label": "text (classification)",
+        "metrics": {
+            "completeness_text": "Protected/empty token ratio ([MASK]/[PAD]/empty)",
+            "uniqueness": "Normalized-hash duplicate ratio",
+            "validity": "UTF-8 + non-empty + min-1-token ratio",
+            "consistency": "Token-count bucket entropy uniformity",
+            "outlier_ratio": "Token-count outlier ratio",
+            "class_balance": "Class balance across labels",
+            "feature_correlation": "DistilBERT embedding dimension redundancy",
+            "label_consistency": "k-NN embedding label agreement (chance-corrected)",
+            "feature_informativeness": "Embedding→label mutual information / H(Y)",
+            "sample_quality_text": "Type-token ratio + length adequacy blend",
+        },
+        "fallback": {
+            "completeness_text": 0.15, "uniqueness": 0.10, "validity": 0.05,
+            "consistency": 0.05, "outlier_ratio": 0.05, "class_balance": 0.10,
+            "feature_correlation": 0.05, "label_consistency": 0.20,
+            "feature_informativeness": 0.10, "sample_quality_text": 0.15,
+        },
+    },
+}
+
+
+def _normalize_modality(data_type: str | None) -> str:
+    dt = (data_type or "tabular").lower()
+    return dt if dt in METRIC_REGISTRY else "tabular"
 
 # ── 2단계: 개선 가이드 프롬프트 ──
 
@@ -119,7 +171,7 @@ Based on the diagnosis results and reference documents, write a detailed improve
 - ⚠️ **지표명** — 점수% ← 개선 필요
 - ❌ **지표명** — 점수% ← 심각
 
-(✅=90%이상 양호, ⚠️=80~90% 주의, ❌=80%미만 심각. 8개 지표를 점수 높은 순으로 모두 나열)
+(✅=90%이상 양호, ⚠️=80~90% 주의, ❌=80%미만 심각. 진단 결과의 모든 지표를 점수 높은 순으로 나열)
 
 ---
 
@@ -201,6 +253,9 @@ _SOURCE_DISPLAY_NAMES = {
     "19_spam_detection": "Kaggle SMS Spam Detection 데이터셋 분석",
     "20_ieee_cis_fraud": "Kaggle IEEE-CIS Fraud Detection 데이터셋 분석",
     "21_network_intrusion": "Kaggle KDD Cup 99 Network Intrusion 데이터셋 분석",
+    "22_cifar10_image_classification": "Kaggle CIFAR-10 이미지 분류 데이터셋 분석",
+    "23_fashion_mnist_image_classification": "Kaggle Fashion-MNIST 이미지 분류 데이터셋 분석",
+    "24_ag_news_text_classification": "Kaggle AG News 텍스트 분류 데이터셋 분석",
     "01_missing_value_handling": "scikit-learn 결측치 처리 기법 가이드",
     "02_outlier_detection_treatment": "scikit-learn 이상치 탐지/처리 가이드",
     "03_class_imbalance_solutions": "imbalanced-learn 클래스 불균형 해결 가이드",
@@ -209,6 +264,8 @@ _SOURCE_DISPLAY_NAMES = {
     "06_data_type_validation": "scikit-learn 데이터 타입/인코딩 가이드",
     "07_consistency_standardization": "pandas 일관성 표준화 가이드",
     "08_feature_correlation_management": "scikit-learn 피처 상관관계 관리 가이드",
+    "09_image_quality_diagnosis": "이미지 데이터 품질 진단 가이드 (cleanlab/Confident Learning · imagehash · ResNet18 임베딩 기반)",
+    "10_text_quality_diagnosis": "텍스트 데이터 품질 진단 가이드 (cleanlab · MinHash 중복제거 · DistilBERT 임베딩 기반)",
     "01_iso_25012_quality_dimensions": "ISO/IEC 25012 데이터 품질 차원 정의",
     "02_ai_ml_data_quality": "AI/ML 데이터 품질 요구사항 (ISO 5259 기반)",
     "03_google_rules_of_ml": "Google Rules of Machine Learning",
@@ -235,24 +292,34 @@ def _build_context(search_results: list[dict]) -> str:
     return "\n\n---\n\n".join(context_parts)
 
 
-def generate_weights(purpose: str, search_results: list[dict]) -> dict:
-    """1단계: 검색 결과를 바탕으로 가중치 추천 생성
+def generate_weights(purpose: str, search_results: list[dict],
+                     data_type: str | None = None) -> dict:
+    """1단계: 검색 결과를 바탕으로 가중치 추천 생성 (모달리티 인식).
 
+    data_type: 'tabular' | 'image' | 'text'. None → tabular.
     Returns:
-        {"weights": {...}, "reasoning": "..."}
+        {"weights": {...0~1...}, "reasoning": "..."}
     """
+    modality = _normalize_modality(data_type)
+    spec = METRIC_REGISTRY[modality]
+    metric_keys = list(spec["metrics"].keys())
+
     if not ANTHROPIC_API_KEY:
         return {
-            "weights": {
-                "completeness": 20, "uniqueness": 15, "validity": 10,
-                "consistency": 10, "outlier_ratio": 10, "class_balance": 10,
-                "feature_correlation": 10, "value_accuracy": 15,
-            },
+            "weights": dict(spec["fallback"]),
             "reasoning": "[API 키 미설정] 기본 가중치를 반환합니다.",
         }
 
     context = _build_context(search_results)
-    prompt = WEIGHT_PROMPT.format(context=context, purpose=purpose)
+    metrics_block = "\n".join(f"- {k}: {v}" for k, v in spec["metrics"].items())
+    weights_json_template = ",\n".join(f'    "{k}": <int>' for k in metric_keys)
+    prompt = WEIGHT_PROMPT.format(
+        context=context, purpose=purpose,
+        modality_label=spec["label"],
+        metrics_block=metrics_block,
+        weights_json_template=weights_json_template,
+        metric_count=len(metric_keys),
+    )
 
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     response = client.messages.create(
@@ -287,11 +354,7 @@ def generate_weights(purpose: str, search_results: list[dict]) -> dict:
 
     except (json.JSONDecodeError, KeyError):
         return {
-            "weights": {
-                "completeness": 0.20, "uniqueness": 0.15, "validity": 0.10,
-                "consistency": 0.10, "outlier_ratio": 0.10, "class_balance": 0.10,
-                "feature_correlation": 0.10, "value_accuracy": 0.15,
-            },
+            "weights": dict(spec["fallback"]),
             "reasoning": f"[파싱 실패] 기본 가중치를 반환합니다. 원본 응답: {response_text[:200]}",
         }
 

@@ -1,6 +1,7 @@
 package com.geomsahaejo.scorecard.job;
 
 import com.geomsahaejo.scorecard.global.response.ApiResponse;
+import com.geomsahaejo.scorecard.job.dto.DiagnosisSpec;
 import com.geomsahaejo.scorecard.job.dto.JobRetryResponse;
 import com.geomsahaejo.scorecard.job.dto.JobStatusResponse;
 import com.geomsahaejo.scorecard.job.dto.JobSubmitResponse;
@@ -26,10 +27,15 @@ public class JobController {
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "jobName", required = false) String jobName,
             @RequestParam(value = "purpose", required = false) String purpose,
-            @RequestParam(value = "weights", required = false) String weightsJson) {
+            @RequestParam(value = "weights", required = false) String weightsJson,
+            @RequestParam(value = "dataType", required = false) String dataType,
+            @RequestParam(value = "task", required = false) String task,
+            @RequestParam(value = "textColumn", required = false) String textColumn,
+            @RequestParam(value = "labelColumn", required = false) String labelColumn) {
         Long userId = getUserId();
         Map<String, Double> weights = parseWeights(weightsJson);
-        JobSubmitResponse response = jobService.submit(userId, jobName, purpose, file, weights);
+        DiagnosisSpec spec = new DiagnosisSpec(dataType, task, textColumn, labelColumn);
+        JobSubmitResponse response = jobService.submit(userId, jobName, purpose, file, weights, spec);
         return ApiResponse.success(response);
     }
 
