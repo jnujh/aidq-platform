@@ -104,6 +104,10 @@ export default function AIAssistantSection() {
               }}
             >
             "사용 목적" 한 줄만 적으면 LLM이 가중치와 진단 기준을 자동 조정합니다
+            <br />
+            <span style={{ color: '#aaa' }}>
+              ※ 화면에는 CSV·Excel·JSON으로 표시되지만, 실제로는 이미지·텍스트 등 비정형 데이터도 함께 진단합니다
+            </span>
             </div>
           </div>
 

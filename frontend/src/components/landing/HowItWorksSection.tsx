@@ -17,7 +17,7 @@ type Step = {
 };
 
 const steps: Step[] = [
-  { Icon: IconUpload, title: '업로드', desc: 'CSV·텍스트 자유', number: '01' },
+  { Icon: IconUpload, title: '업로드', desc: 'CSV·엑셀·JSON·이미지·텍스트', number: '01' },
   { Icon: IconMessageChatbot, title: '목적 입력', desc: '자연어로 입력', isCore: true },
   { Icon: IconAdjustments, title: '가중치 조정', desc: 'RAG로 자동', number: '03' },
   { Icon: IconSearch, title: '진단', desc: '8개 지표 산출', number: '04' },

@@ -1,7 +1,10 @@
 import { Button, Flex } from 'antd';
-import { useNavigate } from 'react-router-dom';
 import { BRAND } from '../../config/brand';
 import resultImage from '../../assets/re1.png';
+
+const scrollToId = (id: string) => {
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
 
 const stats = [
   { highlight: '8가지', label: '진단 지표' },
@@ -10,8 +13,6 @@ const stats = [
 ];
 
 export default function HeroSection() {
-  const navigate = useNavigate();
-
   return (
     <section style={{ padding: '80px 48px', background: '#fff' }}>
       <Flex
@@ -70,7 +71,7 @@ export default function HeroSection() {
           <Flex gap={12} style={{ marginBottom: 56 }}>
             <Button
               type="primary"
-              onClick={() => navigate('/signup')}
+              onClick={() => scrollToId('service')}
               style={{
                 background: BRAND.colors.primary,
                 borderColor: BRAND.colors.primary,
@@ -81,9 +82,10 @@ export default function HeroSection() {
                 borderRadius: 8,
               }}
             >
-              무료로 진단받기
+              기능 둘러보기
             </Button>
             <Button
+              onClick={() => scrollToId('preview')}
               style={{
                 background: '#fff',
                 fontWeight: BRAND.fontWeight.semibold,
@@ -93,7 +95,7 @@ export default function HeroSection() {
                 borderRadius: 8,
               }}
             >
-              데모 보기
+              결과 미리보기
             </Button>
           </Flex>
 
