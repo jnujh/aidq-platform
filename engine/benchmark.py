@@ -41,48 +41,69 @@ from worker import (get_s3_client, S3_BUCKET,
                     RESULT_EXCHANGE, RESULT_ROUTING_KEY, DIAGNOSIS_QUEUE)
 
 # ── 설정 ──
-ROW_SIZES = [50_000, 200_000, 800_000]   # 측정할 데이터 행 수
+SIZES_GB = [2, 8, 32]                     # 측정할 데이터 크기(GB). CLI --sizes로 오버라이드
 N_NUMERIC, N_CATEGORICAL = 8, 4          # 합성 데이터 컬럼 구성 (+ target 1)
 DATA_PREFIX = 'benchmark/data/'          # S3 테스트 데이터 키 접두사
 RESULTS_KEY = 'benchmark/results.jsonl'  # S3 측정 결과 누적 파일
 OUT_DIR = '/app/benchmark_out'           # PNG 산출 디렉터리 (docker cp 대상)
-RESULT_TIMEOUT_SEC = 1800                # 단건 결과 대기 상한
+RESULT_TIMEOUT_SEC = 6 * 3600            # 단건 결과 대기 상한 (대용량 대비 6h)
+GEN_PART_ROWS = 700_000                  # 멀티파트 1파트당 행수 (~64MB, 5MB 하한 충족)
 
 
-def _data_key(rows: int) -> str:
-    return f'{DATA_PREFIX}rows_{rows}.csv'
+def _data_key(gb) -> str:
+    label = f'{gb:g}'.replace('.', 'p')
+    return f'{DATA_PREFIX}size_{label}gb.csv'
 
 
-# ── 1) 합성 데이터 생성 + S3 업로드 ──
-def _build_csv_bytes(rows: int) -> bytes:
-    """진단 부하가 의미 있도록 수치형/범주형/타깃을 섞은 합성 CSV 생성 (시드 고정)."""
-    rng = np.random.default_rng(42)
-    data = {}
-    for i in range(N_NUMERIC):
-        data[f'num_{i}'] = rng.normal(100, 25, rows).round(3)
+# ── 1) 합성 데이터 생성 + S3 업로드 (멀티파트 스트리밍 → 로컬 디스크 불필요) ──
+def _gen_rows_csv(rng, rows, header=False) -> bytes:
+    """수치형/범주형/타깃 섞은 합성 CSV 조각 (시드 rng 공유). header=True면 헤더 포함."""
+    data = {f'num_{i}': rng.normal(100, 25, rows).round(3) for i in range(N_NUMERIC)}
     for i in range(N_CATEGORICAL):
         data[f'cat_{i}'] = rng.choice(['A', 'B', 'C', 'D'], rows)
     data['target'] = rng.integers(0, 2, rows)
-    df = pd.DataFrame(data)
-    buf = io.BytesIO()
-    df.to_csv(buf, index=False, encoding='utf-8')
-    return buf.getvalue()
+    buf = io.StringIO()
+    pd.DataFrame(data).to_csv(buf, index=False, header=header)
+    return buf.getvalue().encode('utf-8')
 
 
-def gen():
+def _gen_one(s3, gb):
+    """gb 크기 CSV를 멀티파트 업로드로 스트리밍 생성 (메모리 ~1파트, 로컬 디스크 0)."""
+    key = _data_key(gb)
+    target = int(gb * 1024 ** 3)
+    try:
+        sz = s3.head_object(Bucket=S3_BUCKET, Key=key)['ContentLength']
+        if sz >= target * 0.97:
+            print(f'  [skip] {key} 이미 존재 ({sz/1024**3:.2f}GB)')
+            return
+    except Exception:
+        pass
+    print(f'  [생성] {key} 목표 {gb}GB → 멀티파트 스트리밍')
+    mpu = s3.create_multipart_upload(Bucket=S3_BUCKET, Key=key)
+    parts, pno, written = [], 1, 0
+    rng = np.random.default_rng(42)
+    try:
+        while written < target:
+            body = _gen_rows_csv(rng, GEN_PART_ROWS, header=(pno == 1))
+            resp = s3.upload_part(Bucket=S3_BUCKET, Key=key, PartNumber=pno,
+                                  UploadId=mpu['UploadId'], Body=body)
+            parts.append({'PartNumber': pno, 'ETag': resp['ETag']})
+            written += len(body); pno += 1
+            if pno % 20 == 0:
+                print(f'    {written/1024**3:.2f}/{gb}GB ({pno-1}파트)')
+        s3.complete_multipart_upload(Bucket=S3_BUCKET, Key=key, UploadId=mpu['UploadId'],
+                                     MultipartUpload={'Parts': parts})
+        print(f'  [완료] {key} — {written/1024**3:.2f}GB, {pno-1}파트')
+    except Exception:
+        s3.abort_multipart_upload(Bucket=S3_BUCKET, Key=key, UploadId=mpu['UploadId'])
+        raise
+
+
+def gen(sizes=None):
     s3 = get_s3_client()
-    for rows in ROW_SIZES:
-        key = _data_key(rows)
-        try:
-            size = s3.head_object(Bucket=S3_BUCKET, Key=key)['ContentLength']
-            print(f'  [skip] {key} 이미 존재 ({size/1024/1024:.1f}MB)')
-            continue
-        except Exception:
-            pass
-        body = _build_csv_bytes(rows)
-        s3.put_object(Bucket=S3_BUCKET, Key=key, Body=body)
-        print(f'  [업로드] {key} — {rows}행, {len(body)/1024/1024:.1f}MB')
-    print('데이터 준비 완료. 청크 분할 크기(TARGET/MIN_CHUNK_SIZE_BYTES)를 파일 크기보다 작게 잡아야 병렬화됨.')
+    for gb in (sizes or SIZES_GB):
+        _gen_one(s3, gb)
+    print('데이터 준비 완료. 청크(TARGET/MIN_CHUNK_SIZE_BYTES)보다 파일이 커야 병렬화됨.')
 
 
 # ── 결과 누적 파일 (S3 jsonl) ──
@@ -154,7 +175,7 @@ def _dispatch_and_wait(ch, result_queue, job_id, s3_key) -> dict:
     return {'elapsed': None, 'success': False, 'score': None, 'error': 'timeout'}
 
 
-def run(workers: int):
+def run(workers: int, sizes=None):
     conn = _connect()
     ch = conn.channel()
     # Spring 미기동 환경 대비: exchange 선언 (DirectExchange, durable — Spring과 동일)
@@ -162,14 +183,20 @@ def run(workers: int):
     # 결과 수신용 임시 큐 (exclusive/auto-delete) → diagnosis.result 바인딩 (Spring result.queue와 공존)
     tmp = ch.queue_declare(queue='', exclusive=True, auto_delete=True).method.queue
     ch.queue_bind(queue=tmp, exchange=RESULT_EXCHANGE, routing_key=RESULT_ROUTING_KEY)
+    s3 = get_s3_client()
 
     print(f'=== 벤치마크 측정 (workers={workers}) ===')
-    for rows in ROW_SIZES:
-        key = _data_key(rows)
-        job_id = f'bench-{workers}-{rows}-{int(time.time())}'
-        print(f'  [측정] rows={rows}, key={key} → 디스패치')
+    for gb in (sizes or SIZES_GB):
+        key = _data_key(gb)
+        try:
+            size_mb = round(s3.head_object(Bucket=S3_BUCKET, Key=key)['ContentLength'] / 1024**2, 1)
+        except Exception:
+            print(f'  [건너뜀] {key} 없음 — gen 먼저 실행')
+            continue
+        job_id = f'bench-{workers}-{gb:g}gb-{int(time.time())}'
+        print(f'  [측정] {gb}GB ({size_mb}MB), key={key} → 디스패치')
         r = _dispatch_and_wait(ch, tmp, job_id, key)
-        record = {'workers': workers, 'rows': rows, 'jobId': job_id, **r}
+        record = {'workers': workers, 'gb': gb, 'size_mb': size_mb, 'jobId': job_id, **r}
         _append_result(record)
         if r['success']:
             extra = (f', 직렬{r["serial_prep_s"]}s/compute{r["compute_s"]}s'
@@ -351,19 +378,23 @@ def plot():
         return
     os.makedirs(OUT_DIR, exist_ok=True)
 
+    records = [r for r in records if r.get('gb') is not None]  # GB급 측정만
+    if not records:
+        print('GB급 측정 결과가 없습니다.')
+        return
     worker_counts = sorted({r['workers'] for r in records})
-    row_sizes = sorted({r['rows'] for r in records})
+    sizes = sorted({r['gb'] for r in records})
 
-    def elapsed_of(w, rows):
-        vals = [r['elapsed'] for r in records if r['workers'] == w and r['rows'] == rows]
+    def elapsed_of(w, gb):
+        vals = [r['elapsed'] for r in records if r['workers'] == w and r['gb'] == gb]
         return min(vals) if vals else None  # 동일 조건 중복 측정 시 최선값
 
     # 차트 1: 데이터 크기별 처리시간 (워커 수별 라인)
     plt.figure(figsize=STYLE['figsize'])
     for w in worker_counts:
-        ys = [elapsed_of(w, rows) for rows in row_sizes]
-        plt.plot([r // 1000 for r in row_sizes], ys, marker=STYLE['marker'], label=f'{w} 워커')
-    plt.xlabel('데이터 크기 (K행)')
+        ys = [elapsed_of(w, gb) for gb in sizes]
+        plt.plot(sizes, ys, marker=STYLE['marker'], label=f'{w} 워커')
+    plt.xlabel('데이터 크기 (GB)')
     plt.ylabel('처리 시간 (초)')
     plt.title('데이터 크기별 진단 시간 (워커 수별)')
     plt.legend(); plt.grid(True, alpha=STYLE['grid_alpha'])
@@ -372,13 +403,13 @@ def plot():
 
     # 차트 2: 워커 수별 speedup = T(1)/T(N) (데이터 크기별 라인 + Amdahl 이상선)
     plt.figure(figsize=STYLE['figsize'])
-    for rows in row_sizes:
-        base = elapsed_of(1, rows)
+    for gb in sizes:
+        base = elapsed_of(1, gb)
         if not base:
             continue
-        ys = [base / elapsed_of(w, rows) if elapsed_of(w, rows) else None
+        ys = [base / elapsed_of(w, gb) if elapsed_of(w, gb) else None
               for w in worker_counts]
-        plt.plot(worker_counts, ys, marker=STYLE['marker'], label=f'{rows // 1000}K행')
+        plt.plot(worker_counts, ys, marker=STYLE['marker'], label=f'{gb:g}GB')
     plt.plot(worker_counts, worker_counts, '--', color=STYLE['ideal_color'], label='이상 (선형)')
     plt.xlabel('워커 수'); plt.ylabel('Speedup (T1 / TN)')
     plt.title('워커 수별 Speedup (데이터 크기별)')
@@ -389,20 +420,20 @@ def plot():
     paths = [p1, p2]
 
     # 차트 3: compute-only speedup (직렬 준비 제외 → 순수 병렬 진단 speedup, 직렬 분할 제거 효과 입증)
-    def compute_of(w, rows):
+    def compute_of(w, gb):
         vals = [r.get('compute_s') for r in records
-                if r['workers'] == w and r['rows'] == rows and r.get('compute_s') is not None]
+                if r['workers'] == w and r['gb'] == gb and r.get('compute_s') is not None]
         return min(vals) if vals else None
 
     if any(r.get('compute_s') is not None for r in records):
         plt.figure(figsize=STYLE['figsize'])
-        for rows in row_sizes:
-            base = compute_of(1, rows)
+        for gb in sizes:
+            base = compute_of(1, gb)
             if not base:
                 continue
-            ys = [base / compute_of(w, rows) if compute_of(w, rows) else None
+            ys = [base / compute_of(w, gb) if compute_of(w, gb) else None
                   for w in worker_counts]
-            plt.plot(worker_counts, ys, marker=STYLE['marker'], label=f'{rows // 1000}K행')
+            plt.plot(worker_counts, ys, marker=STYLE['marker'], label=f'{gb:g}GB')
         plt.plot(worker_counts, worker_counts, '--', color=STYLE['ideal_color'], label='이상 (선형)')
         plt.xlabel('워커 수'); plt.ylabel('Compute 전용 Speedup')
         plt.title('Compute 전용 Speedup (직렬 준비 제외)')
@@ -421,17 +452,19 @@ def plot():
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Step 8 병렬 진단 벤치마크')
+    parser = argparse.ArgumentParser(description='병렬 진단 벤치마크 (GB급)')
     sub = parser.add_subparsers(dest='cmd', required=True)
-    sub.add_parser('gen', help='합성 테스트 데이터 생성 + S3 업로드')
-    p_run = sub.add_parser('run', help='워커 수별 측정 (외부에서 --scale 선행)')
+    p_gen = sub.add_parser('gen', help='합성 테스트 데이터 생성 + S3 업로드')
+    p_gen.add_argument('--sizes', type=float, nargs='+', help='생성할 크기(GB) 목록 (예: 2 8 32 100)')
+    p_run = sub.add_parser('run', help='워커 수별 측정 (외부에서 워커 수 조절 선행)')
     p_run.add_argument('--workers', type=int, required=True, help='현재 기동 중인 워커 수 (라벨)')
+    p_run.add_argument('--sizes', type=float, nargs='+', help='측정할 크기(GB) 목록')
     sub.add_parser('plot', help='누적 결과 시각화 (PNG)')
     args = parser.parse_args()
 
     if args.cmd == 'gen':
-        gen()
+        gen(args.sizes)
     elif args.cmd == 'run':
-        run(args.workers)
+        run(args.workers, args.sizes)
     elif args.cmd == 'plot':
         plot()
