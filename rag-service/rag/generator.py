@@ -23,10 +23,13 @@ Our platform diagnoses {modality_label} data. You must recommend weights for the
 1. Each weight must be an integer between 0 and 100
 2. All weights must sum to exactly 100
 3. Weight of 0 means the metric is disabled (not evaluated)
-4. Base your reasoning on the reference documents provided below
+4. **Hybrid grounding (RAG + general expertise)**: Prioritize the reference documents below and cite them. Where the documents are thin, missing, or do not cover this modality/purpose, supplement with your own expert data-quality knowledge — but ALWAYS make the basis explicit so the user can judge reliability:
+   - Document-grounded claims → cite the FULL document name, e.g., "**Kaggle Telco Customer Churn 데이터셋 분석**에 따르면...".
+   - General-expertise claims (not from the documents) → mark with "(일반 지식)".
+   Prefer grounded reasoning; use general knowledge to FILL GAPS, not to contradict the documents.
 5. Write your reasoning in Korean (한국어)
-6. Be specific — mention actual examples from the reference documents, not generic advice
-7. When citing a reference document, use its FULL NAME (e.g., "Kaggle Telco Customer Churn 데이터셋 분석에 따르면..."), NOT document numbers
+6. Be specific and concrete — tie each weight to either a cited document or a clearly-marked expert rationale. Avoid vague generic advice.
+7. When citing a reference document, use its FULL NAME, NOT document numbers.
 
 ## Reference Documents (from RAG search)
 {context}
@@ -48,6 +51,7 @@ IMPORTANT: Do NOT use Markdown tables. Use lists instead.
 
 ### 📋 추천 요약
 > 한 문장으로 이 가중치 배분의 핵심 전략을 설명
+> 마지막에 근거 구성을 한 줄로: "근거: 참조 문서 N건 + 일반 지식 보강" (문서가 없으면 "일반 지식 기반").
 
 ### 📊 가중치 배분
 (가중치 높은 순으로 {metric_count}개 지표 모두 나열. 아래 형식 그대로 사용:)
@@ -61,7 +65,7 @@ IMPORTANT: Do NOT use Markdown tables. Use lists instead.
 (가중치 높은 순서대로 {metric_count}개 지표 모두 설명. 아래 형식:)
 
 #### 🔴 (지표명) (점수)
-설명 2~3문장. 참조 문서 인용 시 "**문서 전체 이름**에 따르면..." 형식으로 볼드 처리.
+설명 2~3문장. 문서 근거는 "**문서 전체 이름**에 따르면..."(볼드), 문서에 없는 전문 지식 보강은 "(일반 지식)"으로 구분 표기.
 
 (이런 식으로 {metric_count}개 지표를 빠짐없이 #### 소제목으로 작성)
 """
@@ -156,8 +160,11 @@ Based on the diagnosis results and reference documents, write a detailed improve
 2. Use Markdown formatting with emoji icons for visual hierarchy.
 3. Be specific — reference actual techniques and examples from the reference documents.
 4. When mentioning technical terms, add simple explanations in parentheses.
-5. Base ALL recommendations on the reference documents provided. Do not hallucinate techniques or facts not in the documents.
-6. When citing a reference document, use its FULL NAME (e.g., "**Kaggle Telco Customer Churn 분석**에 따르면...") with bold.
+5. **Hybrid grounding (RAG + general expertise)**: Prioritize and cite the reference documents. Where they are thin, missing, or do not cover this data modality, supplement with your own expert data-quality knowledge — but clearly distinguish the basis so the user can judge reliability:
+   - Document-grounded → "**문서 전체 이름**에 따르면..." (bold citation).
+   - General-expertise (not in the documents) → mark with "(일반 지식)".
+   Do NOT contradict the documents; use general knowledge only to fill gaps. Do not invent fake sources or fabricated statistics.
+6. When citing a reference document, use its FULL NAME with bold.
 7. You MUST use Markdown tables where appropriate (e.g., technique comparisons). Tables render correctly in our frontend.
 
 ## Report Structure (follow this EXACTLY)
@@ -256,6 +263,16 @@ _SOURCE_DISPLAY_NAMES = {
     "22_cifar10_image_classification": "Kaggle CIFAR-10 이미지 분류 데이터셋 분석",
     "23_fashion_mnist_image_classification": "Kaggle Fashion-MNIST 이미지 분류 데이터셋 분석",
     "24_ag_news_text_classification": "Kaggle AG News 텍스트 분류 데이터셋 분석",
+    "25_mnist_image_classification": "MNIST 손글씨 이미지 분류 데이터셋 분석",
+    "26_cifar100_image_classification": "CIFAR-100 이미지 분류 데이터셋 분석",
+    "27_caltech101_image_classification": "Caltech-101 이미지 분류 데이터셋 분석",
+    "28_oxford_flowers102_image_classification": "Oxford 102 Flowers 이미지 분류 데이터셋 분석",
+    "29_stanford_dogs_image_classification": "Stanford Dogs 이미지 분류 데이터셋 분석",
+    "30_imdb_sentiment_text_classification": "IMDB 영화리뷰 감성분류 데이터셋 분석",
+    "31_yelp_polarity_text_classification": "Yelp Review Polarity 텍스트 분류 데이터셋 분석",
+    "32_20newsgroups_text_classification": "20 Newsgroups 텍스트 분류 데이터셋 분석",
+    "33_sst2_text_classification": "SST-2 (GLUE) 문장 감성분류 데이터셋 분석",
+    "34_trec_question_text_classification": "TREC 질문유형 분류 데이터셋 분석",
     "01_missing_value_handling": "scikit-learn 결측치 처리 기법 가이드",
     "02_outlier_detection_treatment": "scikit-learn 이상치 탐지/처리 가이드",
     "03_class_imbalance_solutions": "imbalanced-learn 클래스 불균형 해결 가이드",
@@ -266,11 +283,16 @@ _SOURCE_DISPLAY_NAMES = {
     "08_feature_correlation_management": "scikit-learn 피처 상관관계 관리 가이드",
     "09_image_quality_diagnosis": "이미지 데이터 품질 진단 가이드 (cleanlab/Confident Learning · imagehash · ResNet18 임베딩 기반)",
     "10_text_quality_diagnosis": "텍스트 데이터 품질 진단 가이드 (cleanlab · MinHash 중복제거 · DistilBERT 임베딩 기반)",
+    "11_image_augmentation_balancing": "이미지 증강·클래스 균형 가이드 (RandAugment · MixUp · CutMix)",
+    "12_text_cleaning_dedup": "텍스트 정제·중복제거 가이드 (NFKC · MinHash/LSH · 품질 필터)",
+    "13_embedding_outlier_ood_detection": "임베딩 기반 이상치·OOD 탐지 가이드 (k-NN · Mahalanobis · Isolation Forest)",
     "01_iso_25012_quality_dimensions": "ISO/IEC 25012 데이터 품질 차원 정의",
     "02_ai_ml_data_quality": "AI/ML 데이터 품질 요구사항 (ISO 5259 기반)",
     "03_google_rules_of_ml": "Google Rules of Machine Learning",
     "04_task_specific_requirements": "ML 태스크별 데이터 품질 요구사항",
     "05_quality_impact_on_performance": "데이터 품질이 모델 성능에 미치는 영향",
+    "06_iso_5259_ai_data_quality": "ISO/IEC 5259 AI 분석·ML 데이터 품질 표준",
+    "07_data_centric_ai_principles": "데이터 중심 AI 원칙 (Andrew Ng · 라벨 품질)",
 }
 
 
