@@ -21,7 +21,11 @@ public class JobMessagePublisher {
                 job.getUserId(),
                 job.getS3Key(),
                 job.getOriginalFilename(),
-                weights
+                weights,
+                job.getModality(),     // null이면 엔진이 정형(tabular)으로 처리
+                job.getTaskType(),
+                job.getTextColumn(),
+                job.getLabelColumn()
         );
 
         rabbitTemplate.convertAndSend(

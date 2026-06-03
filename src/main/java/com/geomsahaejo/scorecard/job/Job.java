@@ -33,6 +33,21 @@ public class Job {
     @Column(length = 50)
     private DataType dataType;
 
+    // 진단 요청 modality(엔진 data_type): 'image' | 'text' | 'tabular'. null이면 정형(tabular).
+    @Column(length = 20)
+    private String modality;
+
+    // 'classification' | 'regression' (비정형/회귀 텍스트용). null이면 자동/분류.
+    @Column(length = 20)
+    private String taskType;
+
+    // 텍스트 진단 시 텍스트/라벨 열 이름 (선택). 미지정이면 엔진이 휴리스틱으로 결정.
+    @Column(length = 100)
+    private String textColumn;
+
+    @Column(length = 100)
+    private String labelColumn;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private JobStatus status;
@@ -87,6 +102,11 @@ public class Job {
         job.s3Key = s3Key;
         job.parentJobId = parent.getId();
         job.status = JobStatus.PENDING;
+        // 비정형 진단 스펙은 부모와 동일 조건으로 승계 (재진단 의미상)
+        job.modality = parent.modality;
+        job.taskType = parent.taskType;
+        job.textColumn = parent.textColumn;
+        job.labelColumn = parent.labelColumn;
         return job;
     }
 
@@ -96,5 +116,14 @@ public class Job {
 
     public void updateDataType(DataType dataType) {
         this.dataType = dataType;
+    }
+
+    /** 업로드 시점의 비정형 진단 스펙 적용. modality가 blank면 정형(tabular)로 둠(null). */
+    public void applyDiagnosisSpec(String modality, String taskType,
+                                   String textColumn, String labelColumn) {
+        this.modality = (modality == null || modality.isBlank()) ? null : modality;
+        this.taskType = (taskType == null || taskType.isBlank()) ? null : taskType;
+        this.textColumn = (textColumn == null || textColumn.isBlank()) ? null : textColumn;
+        this.labelColumn = (labelColumn == null || labelColumn.isBlank()) ? null : labelColumn;
     }
 }

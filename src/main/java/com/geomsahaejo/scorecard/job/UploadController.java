@@ -2,6 +2,7 @@ package com.geomsahaejo.scorecard.job;
 
 import com.geomsahaejo.scorecard.global.response.ApiResponse;
 import com.geomsahaejo.scorecard.infrastructure.s3.S3Uploader;
+import com.geomsahaejo.scorecard.job.dto.DiagnosisSpec;
 import com.geomsahaejo.scorecard.job.dto.JobRetryResponse;
 import com.geomsahaejo.scorecard.job.dto.JobSubmitResponse;
 import lombok.RequiredArgsConstructor;
@@ -30,9 +31,11 @@ public class UploadController {
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<JobSubmitResponse> start(@RequestBody StartJobRequest request) {
         Long userId = getUserId();
+        DiagnosisSpec spec = new DiagnosisSpec(
+                request.dataType(), request.task(), request.textColumn(), request.labelColumn());
         JobSubmitResponse response = jobService.startDiagnosis(
                 userId, request.s3Key(), request.originalFilename(),
-                request.jobName(), request.purpose(), request.weights());
+                request.jobName(), request.purpose(), request.weights(), spec);
         return ApiResponse.success(response);
     }
 
@@ -60,7 +63,12 @@ public class UploadController {
             String originalFilename,
             String jobName,
             String purpose,
-            Map<String, Double> weights
+            Map<String, Double> weights,
+            // 비정형: 'image' | 'text' | 'tabular'(또는 미지정). 텍스트 열 지정은 선택.
+            String dataType,
+            String task,
+            String textColumn,
+            String labelColumn
     ) {}
 
     public record RetryStartRequest(

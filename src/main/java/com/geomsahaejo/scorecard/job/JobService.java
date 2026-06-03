@@ -4,6 +4,7 @@ import com.geomsahaejo.scorecard.global.exception.CustomException;
 import com.geomsahaejo.scorecard.global.exception.ErrorType;
 import com.geomsahaejo.scorecard.infrastructure.mq.JobMessagePublisher;
 import com.geomsahaejo.scorecard.infrastructure.s3.S3Uploader;
+import com.geomsahaejo.scorecard.job.dto.DiagnosisSpec;
 import com.geomsahaejo.scorecard.job.dto.JobRetryResponse;
 import com.geomsahaejo.scorecard.job.dto.JobStatusResponse;
 import com.geomsahaejo.scorecard.job.dto.JobSubmitResponse;
@@ -30,11 +31,13 @@ public class JobService {
 
     @Transactional
     public JobSubmitResponse submit(Long userId, String jobName, String purpose,
-                                     MultipartFile file, Map<String, Double> weights) {
+                                     MultipartFile file, Map<String, Double> weights,
+                                     DiagnosisSpec spec) {
         String s3Key = s3Uploader.upload(userId, file);
 
         String weightsJson = serializeWeights(weights);
         Job job = Job.create(userId, jobName, file.getOriginalFilename(), purpose, s3Key, weightsJson);
+        applySpec(job, spec);
         jobRepository.save(job);
 
         try {
@@ -47,6 +50,11 @@ public class JobService {
         }
 
         return new JobSubmitResponse(job.getId(), job.getStatus().name());
+    }
+
+    private void applySpec(Job job, DiagnosisSpec spec) {
+        if (spec == null) return;
+        job.applyDiagnosisSpec(spec.dataType(), spec.task(), spec.textColumn(), spec.labelColumn());
     }
 
     private String serializeWeights(Map<String, Double> weights) {
@@ -113,9 +121,11 @@ public class JobService {
 
     @Transactional
     public JobSubmitResponse startDiagnosis(Long userId, String s3Key, String originalFilename,
-                                             String jobName, String purpose, Map<String, Double> weights) {
+                                             String jobName, String purpose, Map<String, Double> weights,
+                                             DiagnosisSpec spec) {
         String weightsJson = serializeWeights(weights);
         Job job = Job.create(userId, jobName, originalFilename, purpose, s3Key, weightsJson);
+        applySpec(job, spec);
         jobRepository.save(job);
 
         try {
