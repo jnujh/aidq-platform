@@ -23,17 +23,18 @@ export const uploadsApi = {
     });
   },
 
-  /** s3Key 기반 진단 시작 (파일 없음) */
+  /** s3Key 기반 진단 시작 (파일 없음). spec: 비정형(image/text) 라우팅·열 지정(선택) */
   startJob(
     s3Key: string,
     originalFilename: string,
     jobName?: string,
     purpose?: string,
     weights?: Record<string, number>,
+    spec?: { dataType?: string; task?: string; textColumn?: string; labelColumn?: string },
   ) {
     return client.post<{ success: boolean; data: JobSubmitResponse }>(
       '/api/jobs/start',
-      { s3Key, originalFilename, jobName, purpose, weights },
+      { s3Key, originalFilename, jobName, purpose, weights, ...(spec ?? {}) },
     );
   },
 
