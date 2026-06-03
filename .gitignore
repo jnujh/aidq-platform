@@ -5,6 +5,7 @@
 .env.*
 !.env.example
 !.env.worker.example
+!.env.bench.example
 
 # ========================
 # Gradle 빌드 산출물

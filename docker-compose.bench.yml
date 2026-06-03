@@ -1,0 +1,59 @@
+# 전용 벤치마크 stack — prod와 완전 격리된 "나만의 테스트 공간".
+#
+# 한 박스 안에 RabbitMQ + Redis + engine(워커)을 전부 담고, 실제 S3에서 데이터를 읽는다.
+# prod의 RabbitMQ/Redis/워커에 전혀 연결하지 않으므로 팀원의 prod 실험과 상호 무간섭.
+# 워커 수는 --scale 로 조절(EC2 stop/start 불필요).
+#
+# 사용법 (전용 벤치 EC2, 권장 c5.2xlarge 8vCPU 16GB):
+#   cp .env.bench.example .env.bench && vi .env.bench   # 실 S3 키 입력
+#   docker compose -f docker-compose.bench.yml --env-file .env.bench up -d --build --scale engine=4
+#   # 측정 (드라이버는 아무 engine 컨테이너에서):
+#   C=$(docker ps -qf name=engine | head -1)
+#   docker exec $C python benchmark.py gen  --sizes 1 4 16
+#   docker exec $C python benchmark.py run  --workers 4 --sizes 1 4 16
+#   # 워커 수 바꾸려면: docker compose ... up -d --scale engine=2  (그 뒤 run --workers 2)
+#
+# rabbit/redis는 이 박스 내부에서만 쓰이므로 포트 노출 불필요(외부 격리).
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-bench}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-benchpass}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+
+  # container_name 미지정 → docker compose --scale engine=N 으로 워커 수 조절
+  engine:
+    build:
+      context: ./engine
+      dockerfile: Dockerfile
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-bench}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-benchpass}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # 실제 AWS S3: AWS_S3_ENDPOINT 미설정 → boto3가 실 S3로 연결
+      AWS_S3_BUCKET: ${AWS_S3_BUCKET}
+      AWS_REGION: ${AWS_REGION:-ap-northeast-2}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      # 8vCPU/16GB 기준 청크 128MB(=pandas ~1.3GB). 8워커×1.3≈10GB < 16GB → swap 불필요.
+      TARGET_CHUNK_SIZE_BYTES: ${TARGET_CHUNK_SIZE_BYTES:-134217728}
+      MIN_CHUNK_SIZE_BYTES: ${MIN_CHUNK_SIZE_BYTES:-33554432}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: always
