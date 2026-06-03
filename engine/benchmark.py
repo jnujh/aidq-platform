@@ -451,6 +451,71 @@ def plot():
     print(f'호스트 복사: docker cp <engine-container>:{OUT_DIR} ./docs/benchmark')
 
 
+def _amdahl_fit_s(workers, speedups):
+    """측정한 (워커수, speedup)에 Amdahl S(N)=1/(s+(1-s)/N)을 피팅해 직렬비율 s 추정.
+    scipy 없이 s를 [0,0.5] 격자 탐색으로 SSE 최소화."""
+    best_s, best_err = 0.0, float('inf')
+    s = 0.0
+    while s <= 0.5:
+        err = 0.0
+        for n, sp in zip(workers, speedups):
+            pred = 1.0 / (s + (1 - s) / n)
+            err += (pred - sp) ** 2
+        if err < best_err:
+            best_err, best_s = err, s
+        s += 0.001
+    return best_s
+
+
+def plot_projection(out_name='speedup_projection.png'):
+    """워커 확장 예측(Amdahl) 차트 — 실측(실선) + 8/16워커 투영(점선·빈마커)."""
+    plt = _setup_style()
+    S = STYLE
+    recs = [r for r in _load_results() if r.get('success') and r.get('gb') is not None
+            and r.get('compute_s')]
+    if not recs:
+        print('compute 측정 결과가 없어 예측 차트를 건너뜀.')
+        return
+    gb = max(r['gb'] for r in recs)  # 가장 큰(대표) 사이즈 기준
+    def comp(n):
+        v = [r['compute_s'] for r in recs if r['gb'] == gb and r['workers'] == n]
+        return min(v) if v else None
+    measured_w = sorted({r['workers'] for r in recs if r['gb'] == gb})
+    base = comp(1)
+    if not base or len(measured_w) < 2:
+        print('1워커 기준 또는 점 부족 → 예측 차트 생략.')
+        return
+    meas_sp = [(n, base / comp(n)) for n in measured_w if comp(n)]
+    s = _amdahl_fit_s([n for n, _ in meas_sp], [v for _, v in meas_sp])
+
+    proj_w = [8, 16]
+    amdahl = lambda n: 1.0 / (s + (1 - s) / n)
+    curve_x = list(range(1, 17))
+    plt.figure(figsize=(9, 5.5))
+    plt.plot(curve_x, [amdahl(n) for n in curve_x], '-', color=S['bar_pale'],
+             lw=2, zorder=2, label=f'Amdahl 모델 (직렬 {s*100:.1f}%)')
+    plt.plot(curve_x, curve_x, '--', color=S['ideal_color'], lw=1.5, label='이상 (선형)')
+    mx = [n for n, _ in meas_sp]; my = [v for _, v in meas_sp]
+    plt.scatter(mx, my, s=110, color=S['bar_vivid'], zorder=5, label='실측')
+    px, py = proj_w, [amdahl(n) for n in proj_w]
+    plt.scatter(px, py, s=130, facecolor='white', edgecolor=S['bar_vivid'],
+                linewidth=2.5, zorder=5, label='예측(Amdahl)')
+    for n, v in zip(px, py):
+        plt.annotate(f'{v:.1f}×', (n, v), textcoords='offset points', xytext=(0, 12),
+                     ha='center', fontsize=11, fontweight='bold', color=S['bar_vivid'])
+    for n, v in meas_sp:
+        plt.annotate(f'{v:.2f}×', (n, v), textcoords='offset points', xytext=(0, -16),
+                     ha='center', fontsize=10, color=S['text_dark'])
+    plt.xlabel('워커 수'); plt.ylabel('Speedup (compute)')
+    plt.title(f'워커 확장 예측 — {gb:g}GB compute 기준 (Amdahl)')
+    plt.xticks([1, 2, 4, 8, 16]); plt.legend(); plt.grid(True, alpha=S['grid_alpha'])
+    os.makedirs(OUT_DIR, exist_ok=True)
+    p = os.path.join(OUT_DIR, out_name)
+    plt.savefig(p, dpi=STYLE['dpi'], facecolor=S['bg'], bbox_inches='tight'); plt.close()
+    print(f'예측 차트 저장: {p} (직렬비율 s={s:.3f}, 8워커 {amdahl(8):.1f}×, 16워커 {amdahl(16):.1f}×)')
+    return p
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='병렬 진단 벤치마크 (GB급)')
     sub = parser.add_subparsers(dest='cmd', required=True)
@@ -460,6 +525,7 @@ if __name__ == '__main__':
     p_run.add_argument('--workers', type=int, required=True, help='현재 기동 중인 워커 수 (라벨)')
     p_run.add_argument('--sizes', type=float, nargs='+', help='측정할 크기(GB) 목록')
     sub.add_parser('plot', help='누적 결과 시각화 (PNG)')
+    sub.add_parser('project', help='워커 확장 Amdahl 예측 차트')
     args = parser.parse_args()
 
     if args.cmd == 'gen':
@@ -468,3 +534,5 @@ if __name__ == '__main__':
         run(args.workers, args.sizes)
     elif args.cmd == 'plot':
         plot()
+    elif args.cmd == 'project':
+        plot_projection()
