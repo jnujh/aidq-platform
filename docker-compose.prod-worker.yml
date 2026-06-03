@@ -1,0 +1,39 @@
+# 워커 전용 prod compose — 워커 EC2에서 실행 (engine만).
+#
+# 토폴로지: 서비스 EC2(앱 + RabbitMQ + Redis, docker-compose.prod.yml) 1대
+#           + 워커 EC2 N대(이 파일). 워커는 중앙 RabbitMQ(5672)·Redis(6379)에
+#           원격 연결하고 실제 AWS S3를 읽는다.
+# entrypoint는 로컬과 동일(celery worker + bridge). bridge는 경쟁 소비자라
+# 워커가 여러 대여도 진단 요청은 정확히 한 번만 디스패치된다.
+#
+# 사용법 (각 워커 EC2에서):
+#   cp .env.worker.example .env.worker     # 서비스 EC2 사설 IP·RabbitMQ 계정·AWS 키 채우기
+#   docker compose -f docker-compose.prod-worker.yml --env-file .env.worker up -d --build --scale engine=N
+#
+# ⚠️ RabbitMQ guest 계정은 localhost 전용 → 원격 워커는 접속 거부됨.
+#    서비스 EC2의 .env.prod에서 RABBITMQ_USERNAME/PASSWORD를 guest 이외로 설정하면
+#    (prod compose의 RABBITMQ_DEFAULT_USER가 그 계정을 생성) 원격 접속이 가능하다.
+#    워커의 .env.worker도 동일한 계정/비번을 사용한다.
+# ⚠️ 보안그룹: 워커 SG → 서비스 SG 의 5672(RabbitMQ)·6379(Redis) 인바운드 허용.
+services:
+  engine:
+    build:
+      context: ./engine
+      dockerfile: Dockerfile
+    environment:
+      RABBITMQ_HOST: ${RABBITMQ_HOST}                 # 서비스 EC2 사설 IP
+      RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME}         # guest 아님 (서비스 EC2와 동일 계정)
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      REDIS_HOST: ${REDIS_HOST}                       # 서비스 EC2 사설 IP
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      # 실제 AWS S3: AWS_S3_ENDPOINT 미설정 → boto3가 실 S3로 연결 (localstack 아님)
+      AWS_S3_BUCKET: ${AWS_S3_BUCKET}
+      AWS_REGION: ${AWS_REGION:-ap-northeast-2}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      # t3.small(2GB RAM) 메모리 안전: 청크 128MB로 축소 (256MB→pandas~1.3GB라 OOM 위험).
+      # concurrency=1이라 동시에 청크 1개만 메모리에 상주.
+      TARGET_CHUNK_SIZE_BYTES: ${TARGET_CHUNK_SIZE_BYTES:-134217728}   # 128MB
+      MIN_CHUNK_SIZE_BYTES: ${MIN_CHUNK_SIZE_BYTES:-33554432}          # 32MB
+    restart: always

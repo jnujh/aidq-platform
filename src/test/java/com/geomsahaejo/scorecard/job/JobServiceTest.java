@@ -53,7 +53,8 @@ class JobServiceTest {
             return job;
         });
 
-        JobSubmitResponse response = jobService.submit(1L, "테스트작업", "ML 학습용", file, Map.of());
+        JobSubmitResponse response = jobService.submit(1L, "테스트작업", "ML 학습용", file, Map.of(),
+                com.geomsahaejo.scorecard.job.dto.DiagnosisSpec.TABULAR);
 
         assertThat(response.status()).isEqualTo("PENDING");
         verify(s3Uploader).upload(eq(1L), any());
@@ -73,7 +74,8 @@ class JobServiceTest {
         willThrow(new RuntimeException("MQ 연결 실패")).given(jobMessagePublisher).publish(any(), any());
 
         CustomException ex = assertThrows(CustomException.class,
-                () -> jobService.submit(1L, "테스트작업", "ML 학습용", file, Map.of()));
+                () -> jobService.submit(1L, "테스트작업", "ML 학습용", file, Map.of(),
+                com.geomsahaejo.scorecard.job.dto.DiagnosisSpec.TABULAR));
 
         assertThat(ex.getErrorType()).isEqualTo(ErrorType.MESSAGE_PUBLISH_FAILED);
 

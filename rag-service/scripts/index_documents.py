@@ -127,6 +127,51 @@ KAGGLE_METADATA = {
         "domain": "security",
         "dataset_name": "network_intrusion",
     },
+    "22_cifar10_image_classification": {
+        "task_type": "image_classification",
+        "domain": "computer_vision",
+        "dataset_name": "cifar10",
+    },
+    "23_fashion_mnist_image_classification": {
+        "task_type": "image_classification",
+        "domain": "computer_vision",
+        "dataset_name": "fashion_mnist",
+    },
+    "24_ag_news_text_classification": {
+        "task_type": "text_classification",
+        "domain": "nlp",
+        "dataset_name": "ag_news",
+    },
+    "25_mnist_image_classification": {
+        "task_type": "image_classification", "domain": "computer_vision", "dataset_name": "mnist",
+    },
+    "26_cifar100_image_classification": {
+        "task_type": "image_classification", "domain": "computer_vision", "dataset_name": "cifar100",
+    },
+    "27_caltech101_image_classification": {
+        "task_type": "image_classification", "domain": "computer_vision", "dataset_name": "caltech101",
+    },
+    "28_oxford_flowers102_image_classification": {
+        "task_type": "image_classification", "domain": "computer_vision", "dataset_name": "oxford_flowers102",
+    },
+    "29_stanford_dogs_image_classification": {
+        "task_type": "image_classification", "domain": "computer_vision", "dataset_name": "stanford_dogs",
+    },
+    "30_imdb_sentiment_text_classification": {
+        "task_type": "text_classification", "domain": "nlp", "dataset_name": "imdb",
+    },
+    "31_yelp_polarity_text_classification": {
+        "task_type": "text_classification", "domain": "nlp", "dataset_name": "yelp_polarity",
+    },
+    "32_20newsgroups_text_classification": {
+        "task_type": "text_classification", "domain": "nlp", "dataset_name": "20newsgroups",
+    },
+    "33_sst2_text_classification": {
+        "task_type": "text_classification", "domain": "nlp", "dataset_name": "sst2",
+    },
+    "34_trec_question_text_classification": {
+        "task_type": "text_classification", "domain": "nlp", "dataset_name": "trec",
+    },
 }
 
 TECHNIQUE_METADATA = {
@@ -138,6 +183,11 @@ TECHNIQUE_METADATA = {
     "06_data_type_validation": {"quality_dimension": "validity"},
     "07_consistency_standardization": {"quality_dimension": "consistency"},
     "08_feature_correlation_management": {"quality_dimension": "feature_correlation"},
+    "09_image_quality_diagnosis": {"quality_dimension": "sample_quality_image,label_consistency"},
+    "10_text_quality_diagnosis": {"quality_dimension": "sample_quality_text,label_consistency"},
+    "11_image_augmentation_balancing": {"quality_dimension": "class_balance"},
+    "12_text_cleaning_dedup": {"quality_dimension": "uniqueness,validity"},
+    "13_embedding_outlier_ood_detection": {"quality_dimension": "outlier_ratio,label_consistency"},
 }
 
 # quality_dimension을 청크 내용에서 자동 감지하기 위한 키워드 매핑

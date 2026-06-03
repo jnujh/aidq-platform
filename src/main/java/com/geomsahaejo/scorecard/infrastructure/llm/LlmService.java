@@ -36,11 +36,16 @@ public class LlmService {
                 .build();
     }
 
-    public WeightRecommendation recommendWeights(String purpose) {
-        log.info("[LLM] 가중치 추천 요청 - purpose: {}", purpose);
+    public WeightRecommendation recommendWeights(String purpose, String dataType) {
+        log.info("[LLM] 가중치 추천 요청 - purpose: {}, dataType: {}", purpose, dataType);
 
         try {
-            String requestBody = objectMapper.writeValueAsString(Map.of("purpose", purpose));
+            Map<String, Object> req = new HashMap<>();
+            req.put("purpose", purpose);
+            if (dataType != null && !dataType.isBlank()) {
+                req.put("data_type", dataType);  // RAG는 snake_case data_type 기대
+            }
+            String requestBody = objectMapper.writeValueAsString(req);
 
             String response = ragClient.post()
                     .uri("/api/recommend-weights")

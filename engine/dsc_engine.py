@@ -201,3 +201,117 @@ def auto_detect_columns(df):
         categorical_cols.remove(target_col)
 
     return target_col, numerical_cols, categorical_cols
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# 병렬 처리용 부분 지표 (Step 3)
+# 각 Worker가 청크 1개를 보고 "원시 카운트"를 반환한다. 비율/평균은 내지 않는다
+# (청크 크기가 달라도 카운트 합산 후 비율을 내면 전체와 정확히 일치).
+# 컬럼 셋(target/numerical/categorical)은 전역 1회 판별값을 주입받아 사용한다.
+# 설계: docs/sessions/parallel-engine/2026-06-01-impl-2-metrics-aggregation.md
+# ──────────────────────────────────────────────────────────────────────────
+
+def calc_outlier_counts(df, numerical_cols, global_q1q3):
+    """전역 Q1/Q3 경계로 컬럼별 이상치 카운트 (분기 판정 없이 카운트만).
+
+    len<4 / iqr==0 분기는 merge가 컬럼 전역 기준으로 1회 적용하므로 여기선 카운트만.
+    반환: {col: {'outlier_count': int, 'valid_total': int}}
+    """
+    result = {}
+    for col in numerical_cols:
+        if col not in df.columns:
+            continue
+        s = pd.to_numeric(df[col], errors='coerce').dropna()
+        valid_total = int(len(s))
+        if col in global_q1q3:
+            q1 = global_q1q3[col]['q1']
+            q3 = global_q1q3[col]['q3']
+            iqr = q3 - q1
+            lower, upper = q1 - 1.5 * iqr, q3 + 1.5 * iqr
+            outlier_count = int(((s < lower) | (s > upper)).sum())
+        else:
+            outlier_count = 0
+        result[col] = {'outlier_count': outlier_count, 'valid_total': valid_total}
+    return result
+
+
+def compute_partial_metrics(df, target_col, numerical_cols, categorical_cols, global_q1q3):
+    """청크 1개의 부분 지표를 원시 카운트로 반환 (aggregator.merge_partial_results 입력)."""
+    feature_df = df.drop(columns=[target_col], errors='ignore')
+    total_cells = int(feature_df.shape[0] * feature_df.shape[1])
+
+    # completeness: NaN + placeholder(-1, 'empty')
+    missing_count = int(feature_df.isnull().sum().sum())
+    for col in numerical_cols:
+        if col in df.columns:
+            missing_count += int((df[col] == -1).sum())
+    for col in categorical_cols:
+        if col in df.columns:
+            missing_count += int((df[col].astype(str) == 'empty').sum())
+
+    # validity (컬럼별 valid/total)
+    validity = {}
+    for col in numerical_cols:
+        if col not in df.columns:
+            continue
+        converted = pd.to_numeric(df[col], errors='coerce')
+        validity[col] = {
+            'valid': int(converted.notna().sum()),
+            'total': int(len(df[col].dropna())),
+        }
+    for col in categorical_cols:
+        if col not in df.columns:
+            continue
+        s = df[col].dropna().astype(str)
+        valid = int(s.apply(lambda x: 0 < len(x.strip()) < 200).sum()) if len(s) > 0 else 0
+        validity[col] = {'valid': valid, 'total': int(len(s))}
+
+    # consistency (범주형만, 접미사 -\d+$)
+    consistency = {}
+    for col in categorical_cols:
+        if col not in df.columns:
+            continue
+        s = df[col].dropna().astype(str)
+        suffix = int(s.apply(lambda x: bool(re.search(r'-\d+$', x))).sum()) if len(s) > 0 else 0
+        consistency[col] = {'suffix_count': suffix, 'total': int(len(s))}
+
+    # class_balance (target value_counts, NaN 제외) — 키는 JSON 안전하게 문자열화
+    class_counts = {}
+    if target_col in df.columns:
+        for label, cnt in df[target_col].value_counts().items():
+            class_counts[str(label)] = int(cnt)
+
+    # feature_correlation: 쌍별 sufficient statistics (i<j, 동시 유효 행만)
+    corr_stats = []
+    corr_skipped = False
+    num_in = [c for c in numerical_cols if c in df.columns]
+    if len(num_in) > 100:
+        corr_skipped = True
+    else:
+        numeric = {c: pd.to_numeric(df[c], errors='coerce') for c in num_in}
+        for i in range(len(num_in)):
+            for j in range(i + 1, len(num_in)):
+                ci, cj = num_in[i], num_in[j]
+                nx, ny = numeric[ci], numeric[cj]
+                mask = nx.notna() & ny.notna()
+                x, y = nx[mask], ny[mask]
+                n = int(len(x))
+                if n == 0:
+                    continue
+                corr_stats.append({
+                    'ci': ci, 'cj': cj, 'n': n,
+                    'sx': float(x.sum()), 'sy': float(y.sum()),
+                    'sxx': float((x * x).sum()), 'syy': float((y * y).sum()),
+                    'sxy': float((x * y).sum()),
+                })
+
+    return {
+        'completeness': {'missing_count': missing_count, 'total_cells': total_cells},
+        'validity': validity,
+        'consistency': consistency,
+        'outlier': calc_outlier_counts(df, numerical_cols, global_q1q3),
+        'class_counts': class_counts,
+        'corr_stats': corr_stats,
+        'corr_skipped': corr_skipped,
+        'uniqueness': {'dup_count': int(df.duplicated().sum()), 'n_rows': int(len(df))},
+    }

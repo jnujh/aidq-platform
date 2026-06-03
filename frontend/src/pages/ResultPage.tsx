@@ -27,6 +27,23 @@ type ParsedMetric = {
   weight?: number;
 };
 
+// 지표 키 → 한글 라벨 (정형 8종 + 이미지/텍스트 비정형 지표). 미정의 키는 원본 키 노출.
+const METRIC_LABELS: Record<string, string> = {
+  completeness: '완전성', uniqueness: '유일성', validity: '유효성',
+  consistency: '일관성', outlier_ratio: '이상치', class_balance: '클래스 균형',
+  feature_correlation: '피처 상관', value_accuracy: '값 정확성',
+  // 비정형 공통/이미지/텍스트
+  completeness_image: '완전성(마스킹)', completeness_text: '완전성(토큰)',
+  label_consistency: '라벨 일관성', feature_informativeness: '피처 정보량',
+  sample_quality_image: '이미지 품질', sample_quality_text: '텍스트 품질',
+  target_distribution_quality: '타깃 분포', target_smoothness: '타깃 평활성',
+  feature_informativeness_reg: '피처 정보량',
+};
+
+function metricLabel(key: string): string {
+  return METRIC_LABELS[key] ?? key;
+}
+
 // 워커가 만든 결과 JSON 구조는 영역 외(RAG/워커). 흔한 두 형태를 방어적으로 수용:
 //   (1) { metrics: [{label, score, weight?}, ...] }  / 키 이름은 name 또는 key 도 허용
 //   (2) { scores: { label1: 92, label2: 85, ... } }
@@ -61,11 +78,22 @@ function parseMetrics(rawJson: string | null): ParsedMetric[] {
       .filter((x): x is ParsedMetric => x !== null);
   }
 
+  // metrics가 객체(dict) 형태: DSC 엔진 출력 {metrics: {completeness: 0.95, ...}}.
+  // 지표값은 0~1 → 막대/색상(0~100 기준) 위해 ×100. 정형·비정형 공통.
+  if (metricsArr && typeof metricsArr === 'object' && !Array.isArray(metricsArr)) {
+    return Object.entries(metricsArr as Record<string, unknown>)
+      .filter(([, v]) => typeof v === 'number')
+      .map(([k, v]) => {
+        const raw = v as number;
+        return { label: metricLabel(k), score: raw <= 1 ? Math.round(raw * 1000) / 10 : raw };
+      });
+  }
+
   const scoresObj = (obj.scores ?? obj.metric_scores) as unknown;
   if (scoresObj && typeof scoresObj === 'object') {
     return Object.entries(scoresObj as Record<string, unknown>)
       .filter(([, v]) => typeof v === 'number')
-      .map(([k, v]) => ({ label: k, score: v as number }));
+      .map(([k, v]) => ({ label: metricLabel(k), score: v as number }));
   }
 
   return [];
