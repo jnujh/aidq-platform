@@ -187,15 +187,27 @@ def run(workers: int):
 # 레퍼런스 이미지를 받으면 아래 STYLE 값(색·폰트·크기)만 갈아끼우면 전 차트에 반영된다.
 STYLE = {
     'font_family': 'NanumGothic',   # 한글 폰트 (엔진 이미지에 fonts-nanum 설치)
-    'palette': ['#2563EB', '#16A34A', '#F59E0B', '#DC2626', '#7C3AED', '#0891B2'],  # 시리즈 색
+    'palette': ['#2563EB', '#60A5FA', '#16A34A', '#F59E0B', '#DC2626', '#7C3AED'],  # 시리즈 색
     'ideal_color': '#9CA3AF',       # 이상선(점선)
-    'bg': '#FFFFFF',
-    'grid_alpha': 0.3,
+    'bg': '#EEF1F6',                 # Shiftee 톤 밝은 회청 배경
+    'grid_alpha': 0.25,
     'figsize': (8, 5),
     'dpi': 150,
     'title_size': 14,
     'label_size': 11,
     'marker': 'o',
+    # ── 히어로 차트(레퍼런스 매칭) 전용 색 ──
+    'bar_pale': '#C5D6F2',          # 일반 막대(연파랑)
+    'bar_vivid': '#2563EB',         # 강조 막대(진파랑) — 최선 결과
+    'bar_vivid_top': '#3B82F6',     # 그라디언트 상단
+    'pill_bg': '#1F2937',           # 다크 알약 주석 배경
+    'pill_fg': '#FFFFFF',
+    'trend': '#1E3A8A',             # 점선 추세선(네이비)
+    'badge_bg': '#2563EB',          # 원형 배지
+    'badge_fg': '#FFFFFF',
+    'text_dark': '#1F2937',
+    'text_muted': '#6B7280',
+    'accent': '#2563EB',            # 제목 강조 숫자
 }
 
 
@@ -224,6 +236,110 @@ def _setup_style():
         'figure.dpi': STYLE['dpi'],
     })
     return plt
+
+
+def _fmt_time(sec):
+    if sec >= 60:
+        m = sec / 60
+        return f'{m:.1f}분' if m < 10 else f'{m:.0f}분'
+    return f'{sec:.0f}초'
+
+
+def _grad_bar(ax, x, w, h, c0, c1, zorder=3):
+    """세로 그라디언트(아래 c0→위 c1) 막대. imshow를 막대 영역에 클립."""
+    import matplotlib.colors as mcolors
+    grad = np.linspace(0, 1, 256).reshape(-1, 1)
+    cmap = mcolors.LinearSegmentedColormap.from_list('', [c0, c1])
+    ax.imshow(grad, extent=[x - w / 2, x + w / 2, 0, h], origin='lower',
+              aspect='auto', cmap=cmap, zorder=zorder)
+
+
+def _rich_line(fig, x, y, segments, fontsize, weight='bold'):
+    """한 줄 안에서 색을 섞는 텍스트 (figure fraction 좌표, 좌상단 정렬)."""
+    from matplotlib.offsetbox import TextArea, HPacker, AnnotationBbox
+    boxes = [TextArea(t, textprops=dict(color=c, fontsize=fontsize, fontweight=weight,
+                                        fontfamily=STYLE['font_family'])) for t, c in segments]
+    pack = HPacker(children=boxes, align='baseline', pad=0, sep=0)
+    fig.add_artist(AnnotationBbox(pack, (x, y), xycoords='figure fraction',
+                                  box_alignment=(0, 1), frameon=False))
+
+
+def plot_hero(workers, times, speedups, eyebrow, headline, headline_badge,
+              accuracy_text, context_text, out_name='hero_time.png', sample=False):
+    """레퍼런스(Shiftee) 디자인 참조 히어로 차트 v2.
+
+    x=워커 수, y=처리 시간(내려가는 그라디언트 막대=빠를수록 좋음). 최선 막대 진파랑 강조,
+    곡선 점선 추세선·'N배 빠름' 알약(연결선)·헤드라인 원형배지·컬러 헤드라인·정확도 콜아웃.
+    headline=[(텍스트,색),...] 컬러 혼합. STYLE 단일 지점으로 제어.
+    """
+    plt = _setup_style()
+    S = STYLE
+    fig, ax = plt.subplots(figsize=(12, 7))
+    fig.patch.set_facecolor(S['bg'])
+    fig.subplots_adjust(left=0.05, right=0.96, top=0.66, bottom=0.13)
+    n = len(workers)
+    xs = list(range(n))
+    ymax = max(times) * 1.32
+    bw = 0.46
+
+    # 막대 (일반=연파랑 단색, 최선=진파랑 그라디언트)
+    for i, (x, t) in enumerate(zip(xs, times)):
+        if i == n - 1:
+            _grad_bar(ax, x, bw, t, '#3B82F6', '#1B43C0')   # 아래 밝게→위 진하게
+        else:
+            ax.bar(x, t, width=bw, color=S['bar_pale'], zorder=3, edgecolor='none')
+        ax.text(x, t + ymax * 0.025, _fmt_time(t), ha='center', va='bottom',
+                fontsize=13, fontweight='bold', color=S['text_dark'], zorder=6)
+
+    # 곡선 점선 추세선 (3점이면 2차식으로 부드럽게) + 흰 원 마커
+    deg = min(len(xs) - 1, 3)
+    coef = np.polyfit(xs, times, deg)
+    xx = np.linspace(0, n - 1, 100)
+    ax.plot(xx, np.polyval(coef, xx), '--', color=S['trend'], lw=1.8, zorder=4)
+    ax.scatter(xs, times, s=85, facecolor='white', edgecolor=S['trend'],
+               linewidth=2, zorder=5)
+
+    # 'N배 빠름' 알약 + 마커로 가는 연결선
+    for i, (x, t, sp) in enumerate(zip(xs, times, speedups)):
+        label = '기준' if i == 0 else f'{sp:.1f}배 빠름'
+        ax.annotate(label, xy=(x, t), xytext=(x, t + ymax * 0.13),
+                    ha='center', va='center', fontsize=11, color=S['pill_fg'], zorder=7,
+                    bbox=dict(boxstyle='round,pad=0.5', fc=S['pill_bg'], ec='none'),
+                    arrowprops=dict(arrowstyle='-', color=S['pill_bg'], lw=1.2,
+                                    shrinkA=6, shrinkB=8))
+
+    # 헤드라인 원형 배지 (최선 막대 안, scatter로 정원 유지)
+    bx, by = n - 1, times[-1] * 0.48
+    ax.scatter([bx], [by], s=5200, color=S['badge_bg'], edgecolor='white',
+               linewidth=3, zorder=8)
+    ax.text(bx, by, headline_badge, ha='center', va='center', fontsize=18,
+            fontweight='bold', color=S['badge_fg'], zorder=9)
+
+    ax.set_xlim(-0.6, n - 0.4); ax.set_ylim(0, ymax); ax.set_aspect('auto')
+    ax.set_xticks(xs); ax.set_xticklabels([f'{w}워커' for w in workers], fontsize=13,
+                                          color=S['text_dark'])
+    ax.set_yticks([])
+    for sp in ('top', 'right', 'left'):
+        ax.spines[sp].set_visible(False)
+    ax.spines['bottom'].set_color('#CBD5E1')
+    ax.tick_params(length=0)
+
+    # 헤드라인 블록 (좌상단): eyebrow + 컬러 혼합 헤드라인
+    fig.text(0.05, 0.92, eyebrow, fontsize=13, color=S['text_muted'])
+    _rich_line(fig, 0.05, 0.88, headline, fontsize=30)
+    # 정확도 콜아웃 (우상단)
+    fig.text(0.95, 0.93, accuracy_text, ha='right', va='top', fontsize=11.5,
+             color=S['accent'], fontweight='bold',
+             bbox=dict(boxstyle='round,pad=0.6', fc='white', ec=S['accent'], lw=1.4))
+    # 컨텍스트 푸터
+    foot = context_text + ('   ※ 예시 수치 (A6 실측 전 시안)' if sample else '')
+    fig.text(0.05, 0.035, foot, fontsize=10, color=S['text_muted'])
+
+    os.makedirs(OUT_DIR, exist_ok=True)
+    p = os.path.join(OUT_DIR, out_name)
+    plt.savefig(p, dpi=STYLE['dpi'], facecolor=S['bg'], bbox_inches='tight'); plt.close()
+    print(f'히어로 차트 저장: {p}')
+    return p
 
 
 def plot():
