@@ -38,37 +38,27 @@ Our platform diagnoses {modality_label} data. You must recommend weights for the
 ## User's Data Usage Purpose
 "{purpose}"
 
-## Response Format (JSON only)
+## Output Format (반드시 이 순서로 두 부분 출력)
+**PART 1** — 가중치만 담은 JSON 코드블록 (정수 0~100, 합계 정확히 100). reasoning은 절대 넣지 말 것:
+```json
 {{
-  "weights": {{
 {weights_json_template}
-  }},
-  "reasoning": "<Markdown 형식의 한국어 추천 근거. 아래 형식을 반드시 따를 것>"
 }}
+```
 
-## Reasoning Format (Markdown)
-The "reasoning" field MUST follow this exact Markdown structure.
-IMPORTANT: Do NOT use Markdown tables. Use lists instead.
+**PART 2** — JSON 블록 다음 줄에 `===REASONING===` 한 줄, 그 뒤에 한국어 Markdown 근거(평문, JSON 아님).
+긴 설명·줄바꿈·따옴표 자유롭게 사용 가능.
 
+## Reasoning (PART 2 형식 — Markdown 표 금지, 리스트 사용)
 ### 📋 추천 요약
-> 한 문장으로 이 가중치 배분의 핵심 전략을 설명
-> 마지막에 근거 구성을 한 줄로: "근거: 참조 문서 N건 + 일반 지식 보강" (문서가 없으면 "일반 지식 기반").
+> 한 문장으로 핵심 전략. 마지막 줄에 "근거: 참조 문서 N건 + 일반 지식 보강" (문서 없으면 "일반 지식 기반").
 
 ### 📊 가중치 배분
-(가중치 높은 순으로 {metric_count}개 지표 모두 나열. 아래 형식 그대로 사용:)
-- 🔴 **(지표명)** — 18점 (상)
-- 🟡 **(지표명)** — 12점 (중)
-- ...
-
-(🔴=상(15+), 🟡=중(8~14), 🟢=하(0~7))
+(높은 순으로 {metric_count}개 모두: `- 🔴 **(지표명)** — N점 (상)`. 🔴=상(15+) 🟡=중(8~14) 🟢=하(0~7))
 
 ### 🔍 상세 근거
-(가중치 높은 순서대로 {metric_count}개 지표 모두 설명. 아래 형식:)
-
-#### 🔴 (지표명) (점수)
-설명 2~3문장. 문서 근거는 "**문서 전체 이름**에 따르면..."(볼드), 문서에 없는 전문 지식 보강은 "(일반 지식)"으로 구분 표기.
-
-(이런 식으로 {metric_count}개 지표를 빠짐없이 #### 소제목으로 작성)
+(높은 순으로 {metric_count}개 모두. `#### (지표명) (N점)` 뒤 1~2문장.
+문서 근거는 "**문서 전체 이름**에 따르면…"(볼드), 문서에 없는 전문 지식은 "(일반 지식)"으로 구분 표기.)
 """
 
 # 모달리티별 지표 레지스트리 — (설명, 사전등록 fallback 가중치 0~1).
@@ -363,7 +353,7 @@ def generate_weights(purpose: str, search_results: list[dict],
         messages=[{"role": "user", "content": prompt}],
     )
 
-    response_text = _strip_code_block(response.content[0].text.strip())
+    text = response.content[0].text.strip()
 
     def _normalize_to_ratio(weights):
         total = sum(weights.values())
@@ -376,22 +366,27 @@ def generate_weights(purpose: str, search_results: list[dict],
                 weights[max_key] += diff
         return {k: v / 100.0 for k, v in weights.items()}
 
-    try:
-        result = json.loads(response_text)
-        weights = {k: result["weights"][k] for k in metric_keys}  # 기대 지표만
-        return {"weights": _normalize_to_ratio(weights),
-                "reasoning": result.get("reasoning", "")}
+    # PART1: 가중치 JSON 블록(펜스 우선, 없으면 첫 {...})만 파싱 → reasoning은 JSON 밖이라 escape/잘림 영향 없음.
+    jm = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', text, re.DOTALL) or re.search(r'(\{.*?\})', text, re.DOTALL)
+    weights = None
+    if jm:
+        try:
+            parsed = json.loads(jm.group(1))
+            weights = {k: int(parsed[k]) for k in metric_keys}
+        except Exception:
+            weights = None
+    if weights is None:
+        weights = _salvage_weights(text, metric_keys) or None
+    if not weights:
+        return {"weights": dict(spec["fallback"]),
+                "reasoning": f"[파싱 실패] 기본 가중치를 반환합니다. 원본 응답: {text[:200]}"}
 
-    except (json.JSONDecodeError, KeyError, TypeError):
-        # 응답이 잘렸어도(reasoning 길어 truncation) weights 블록은 JSON 앞부분이라 정규식으로 복구.
-        salvaged = _salvage_weights(response_text, metric_keys)
-        if salvaged:
-            return {"weights": _normalize_to_ratio(salvaged),
-                    "reasoning": "[부분 복구] 근거 설명이 길어 일부 생략됐지만, LLM이 추천한 가중치는 정상 반영했습니다."}
-        return {
-            "weights": dict(spec["fallback"]),
-            "reasoning": f"[파싱 실패] 기본 가중치를 반환합니다. 원본 응답: {response_text[:200]}",
-        }
+    # PART2: JSON 블록 이후 평문 = reasoning (===REASONING=== 마커 제거)
+    rest = text[jm.end():] if jm else ""
+    reasoning = re.sub(r'={2,}\s*REASONING\s*={2,}', '', rest, flags=re.IGNORECASE).strip()
+    if not reasoning:
+        reasoning = "(근거 설명이 생성되지 않았습니다.)"
+    return {"weights": _normalize_to_ratio(weights), "reasoning": reasoning}
 
 
 def generate_report(diagnosis_result: dict, purpose: str, search_results: list[dict]) -> str:
