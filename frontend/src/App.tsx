@@ -125,6 +125,7 @@ const STANDALONE_PAGES: Record<string, StandalonePageEntry> = {
     id: 'service',
     content: (
       <>
+        <HowItWorksSection />
         <PurposeComparisonSection />
         <AnomalyDetectionSection />
         <LLMWeightSection />
@@ -145,7 +146,6 @@ const STANDALONE_PAGES: Record<string, StandalonePageEntry> = {
     ),
   },
   '/platform/preview': { id: 'preview', content: <ResultPreviewSection /> },
-  '/platform/guide': { id: 'guide', content: <HowItWorksSection /> },
   '/platform/pipeline': { id: 'pipeline', content: <PipelineSection /> },
   // Solutions
   '/solutions/usecases': {

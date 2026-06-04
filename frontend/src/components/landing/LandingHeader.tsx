@@ -12,10 +12,9 @@ const menuItems = [
     key: 'platform',
     label: 'Platform',
     children: [
-      { key: 'service', label: 'AI 진단 방식' },
+      { key: 'service', label: 'AI 진단 가이드' },
       { key: 'metrics', label: '측정 지표' },
       { key: 'preview', label: '진단 결과 미리보기' },
-      { key: 'guide', label: '사용 가이드' },
       { key: 'pipeline', label: '시스템 구조' },
     ],
   },
@@ -53,7 +52,6 @@ const ROUTE_FOR_KEY: Record<string, string> = {
   service: '/platform/service',
   metrics: '/platform/metrics',
   preview: '/platform/preview',
-  guide: '/platform/guide',
   pipeline: '/platform/pipeline',
   // Solutions 하위
   usecases: '/solutions/usecases',
