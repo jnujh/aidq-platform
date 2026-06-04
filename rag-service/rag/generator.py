@@ -24,10 +24,8 @@ Our platform diagnoses {modality_label} data. You must recommend weights for the
 1. Each weight must be an integer between 0 and 100
 2. All weights must sum to exactly 100
 3. Weight of 0 means the metric is disabled (not evaluated)
-4. **Hybrid grounding (RAG + general expertise)**: Prioritize the reference material below and cite it. Where it is thin, missing, or does not cover this modality/purpose, supplement with your own expert data-quality knowledge — but ALWAYS make the basis explicit so the user can judge reliability:
-   - 참조 자료 근거 → 그 기법의 **실제 출처(도구·표준·기관)**를 자연스러운 문장으로 밝힌다. 예: "scikit-learn 가이드에 따르면", "ISO/IEC 25012 표준이 정의한", "imbalanced-learn이 제안하는". 절대 "문서 3" 같은 내부 번호·명칭은 쓰지 말 것(사용자는 못 봄).
-   - General-expertise claims (not from the material) → mark with "(일반 지식)".
-   Prefer grounded reasoning; use general knowledge to FILL GAPS, not to contradict the material.
+4. **Grounding**: 참조 자료가 관련 있으면 그 기법의 실제 출처(도구·표준·기관)를 자연스러운 문장으로 밝혀 인용한다. 예: "scikit-learn 가이드에 따르면", "ISO/IEC 25012 표준이 정의한", "imbalanced-learn이 제안하는". 자료가 부족하거나 없으면 데이터 품질 전문가로서 자신감 있게 권고하되 출처를 지어내지 말 것.
+   ⚠️ "문서 3" 같은 내부 문서 번호·명칭 금지(사용자는 못 봄). ⚠️ "(일반 지식)" 같은 꼬리표 금지 — 전문성이 떨어져 보인다. 모든 서술을 전문가의 확신 있는 권고로 자연스럽게 쓸 것.
 5. Write your reasoning in Korean (한국어).
 6. Be specific and concrete — tie each weight to either a cited source or a clearly-marked expert rationale. Avoid vague generic advice.
 7. 근거 인용 시 별표(`**...**`)로 감싸지 말 것 — 한글 조사가 뒤에 붙으면 렌더링이 깨져 별표가 그대로 노출된다. 강조는 별표 없이 평문으로.
@@ -55,14 +53,14 @@ completeness/completeness_text/completeness_image=완전성 · uniqueness=고유
 
 ## Reasoning (PART 2 형식 — Markdown 표 금지, 리스트 사용. 지표명은 위 '지표 한글명'으로)
 ### 📋 추천 요약
-> 한 문장으로 핵심 전략. 마지막 줄에 "근거: 참조 자료 N건 + 일반 지식 보강" (자료 없으면 "일반 지식 기반").
+> 한 문장으로 핵심 전략을 간결하게.
 
 ### 📊 가중치 배분
 (높은 순으로 {metric_count}개 모두: `- 🔴 (한글 지표명) — N점 (상)`. 🔴=상(15+) 🟡=중(8~14) 🟢=하(0~7))
 
 ### 🔍 상세 근거
-(높은 순으로 {metric_count}개 모두. `#### (한글 지표명) (N점)` 뒤 1~2문장.
-출처 근거는 실제 도구·표준·기관명을 자연스러운 문장으로(예: "scikit-learn 가이드에 따르면"), 별표로 감싸지 말 것. 자료에 없는 전문 지식은 "(일반 지식)"으로 구분 표기.)
+(높은 순으로 {metric_count}개 모두. `#### (한글 지표명) (N점)` 뒤 1문장으로 짧게.
+출처가 있으면 실제 도구·표준·기관명을 자연스러운 문장으로(예: "scikit-learn 가이드에 따르면"), 별표로 감싸지 말 것. 출처가 없으면 전문가 권고로 자연스럽게 쓰고 "(일반 지식)" 같은 꼬리표는 붙이지 말 것.)
 """
 
 # 모달리티별 지표 레지스트리 — (설명, 사전등록 fallback 가중치 0~1).
@@ -170,7 +168,7 @@ sample_quality_text / sample_quality_image = 샘플 품질
      "ISO/IEC 25012 표준이 정의한", "cleanlab의 Confident Learning 기법에서 제시한".
    - 금지: "문서 3", "문서 5" 같은 내부 문서 번호·명칭 (사용자는 그 문서를 볼 수 없다).
    - 금지: 출처·강조를 별표(`**...**`)로 감싸기 — 한글 조사가 뒤에 붙으면 렌더링이 깨져 별표가 그대로 보인다. 강조는 별표 없이 평문으로.
-   - 참조 자료에 없는 일반 상식으로 보충할 땐 문장 끝에 "(일반 지식)" 표시. 가짜 출처·수치 날조 금지.
+   - 참조 자료에 없으면 데이터 품질 전문가로서 자신감 있게 권고하되 출처를 지어내지 말 것. ⚠️ "(일반 지식)" 같은 꼬리표는 붙이지 말 것 — 전문성이 떨어져 보인다.
 4. 기술 용어엔 괄호로 짧은 설명. 기법 비교는 마크다운 표 사용(프론트에서 정상 렌더).
 5. **아래 구조만** 출력. 구조 밖 섹션(최종 정리·추가 권장사항·모니터링 표 등)을 임의로 덧붙이지 말 것.
 
