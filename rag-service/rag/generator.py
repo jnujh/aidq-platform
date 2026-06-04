@@ -24,14 +24,17 @@ Our platform diagnoses {modality_label} data. You must recommend weights for the
 1. Each weight must be an integer between 0 and 100
 2. All weights must sum to exactly 100
 3. Weight of 0 means the metric is disabled (not evaluated)
-4. **Hybrid grounding (RAG + general expertise)**: Prioritize the reference documents below and cite them. Where the documents are thin, missing, or do not cover this modality/purpose, supplement with your own expert data-quality knowledge — but ALWAYS make the basis explicit so the user can judge reliability:
-   - Document-grounded claims → cite the FULL document name, e.g., "**Kaggle Telco Customer Churn 데이터셋 분석**에 따르면...".
-   - General-expertise claims (not from the documents) → mark with "(일반 지식)".
-   Prefer grounded reasoning; use general knowledge to FILL GAPS, not to contradict the documents.
-5. Write your reasoning in Korean (한국어)
-6. Be specific and concrete — tie each weight to either a cited document or a clearly-marked expert rationale. Avoid vague generic advice.
-7. When citing a reference document, use its FULL NAME, NOT document numbers.
-8. **CRITICAL — use the EXACT metric key names** shown in the JSON template below. Do NOT translate, rename, abbreviate, merge, or "improve" them (e.g., keep `label_consistency` exactly as `label_consistency` — never rewrite it as `label_informativeness`). Output the keys in the SAME ORDER as the template.
+4. **Hybrid grounding (RAG + general expertise)**: Prioritize the reference material below and cite it. Where it is thin, missing, or does not cover this modality/purpose, supplement with your own expert data-quality knowledge — but ALWAYS make the basis explicit so the user can judge reliability:
+   - 참조 자료 근거 → 그 기법의 **실제 출처(도구·표준·기관)**를 자연스러운 문장으로 밝힌다. 예: "scikit-learn 가이드에 따르면", "ISO/IEC 25012 표준이 정의한", "imbalanced-learn이 제안하는". 절대 "문서 3" 같은 내부 번호·명칭은 쓰지 말 것(사용자는 못 봄).
+   - General-expertise claims (not from the material) → mark with "(일반 지식)".
+   Prefer grounded reasoning; use general knowledge to FILL GAPS, not to contradict the material.
+5. Write your reasoning in Korean (한국어).
+6. Be specific and concrete — tie each weight to either a cited source or a clearly-marked expert rationale. Avoid vague generic advice.
+7. 근거 인용 시 별표(`**...**`)로 감싸지 말 것 — 한글 조사가 뒤에 붙으면 렌더링이 깨져 별표가 그대로 노출된다. 강조는 별표 없이 평문으로.
+8. **CRITICAL — use the EXACT metric key names** shown in the JSON template below (PART 1). Do NOT translate, rename, abbreviate, merge, or "improve" them (e.g., keep `label_consistency` exactly as `label_consistency` — never rewrite it as `label_informativeness`). Output the keys in the SAME ORDER as the template. (단, PART 2 reasoning의 사람이 읽는 지표명은 아래 한글명으로 표기.)
+
+## 지표 한글명 (PART 2 reasoning에서만 사용; PART 1 JSON 키는 영문 그대로)
+completeness/completeness_text/completeness_image=완전성 · uniqueness=고유성(중복도) · validity=유효성 · consistency=일관성 · outlier_ratio=이상치 비율 · class_balance=클래스 균형 · feature_correlation=특성 상관도 · value_accuracy=값 정확도 · label_consistency=레이블 일관성 · feature_informativeness=특성 정보량 · sample_quality_text/sample_quality_image=샘플 품질
 
 ## Reference Documents (from RAG search)
 {context}
@@ -50,16 +53,16 @@ Our platform diagnoses {modality_label} data. You must recommend weights for the
 **PART 2** — JSON 블록 다음 줄에 `===REASONING===` 한 줄, 그 뒤에 한국어 Markdown 근거(평문, JSON 아님).
 긴 설명·줄바꿈·따옴표 자유롭게 사용 가능.
 
-## Reasoning (PART 2 형식 — Markdown 표 금지, 리스트 사용)
+## Reasoning (PART 2 형식 — Markdown 표 금지, 리스트 사용. 지표명은 위 '지표 한글명'으로)
 ### 📋 추천 요약
-> 한 문장으로 핵심 전략. 마지막 줄에 "근거: 참조 문서 N건 + 일반 지식 보강" (문서 없으면 "일반 지식 기반").
+> 한 문장으로 핵심 전략. 마지막 줄에 "근거: 참조 자료 N건 + 일반 지식 보강" (자료 없으면 "일반 지식 기반").
 
 ### 📊 가중치 배분
-(높은 순으로 {metric_count}개 모두: `- 🔴 **(지표명)** — N점 (상)`. 🔴=상(15+) 🟡=중(8~14) 🟢=하(0~7))
+(높은 순으로 {metric_count}개 모두: `- 🔴 (한글 지표명) — N점 (상)`. 🔴=상(15+) 🟡=중(8~14) 🟢=하(0~7))
 
 ### 🔍 상세 근거
-(높은 순으로 {metric_count}개 모두. `#### (지표명) (N점)` 뒤 1~2문장.
-문서 근거는 "**문서 전체 이름**에 따르면…"(볼드), 문서에 없는 전문 지식은 "(일반 지식)"으로 구분 표기.)
+(높은 순으로 {metric_count}개 모두. `#### (한글 지표명) (N점)` 뒤 1~2문장.
+출처 근거는 실제 도구·표준·기관명을 자연스러운 문장으로(예: "scikit-learn 가이드에 따르면"), 별표로 감싸지 말 것. 자료에 없는 전문 지식은 "(일반 지식)"으로 구분 표기.)
 """
 
 # 모달리티별 지표 레지스트리 — (설명, 사전등록 fallback 가중치 0~1).
@@ -134,9 +137,7 @@ def _normalize_modality(data_type: str | None) -> str:
 
 # ── 2단계: 개선 가이드 프롬프트 ──
 
-REPORT_PROMPT = """You are a data quality improvement advisor for an AI-Ready data quality diagnosis platform.
-
-Based on the diagnosis results and reference documents, write a detailed improvement guide in Korean.
+REPORT_PROMPT = """You are a data quality improvement advisor. Write a CONCISE, scannable improvement guide in Korean (한국어 전용).
 
 ## Diagnosis Results
 {diagnosis_result}
@@ -144,74 +145,65 @@ Based on the diagnosis results and reference documents, write a detailed improve
 ## User's Data Usage Purpose
 "{purpose}"
 
-## Reference Documents (from RAG search)
+## Reference Material (우리 지식베이스 검색 결과)
 {context}
 
-## Writing Rules
-1. Write entirely in Korean (한국어). Do NOT mix Chinese, Japanese, or other languages.
-2. Use Markdown formatting with emoji icons for visual hierarchy.
-3. Be specific — reference actual techniques and examples from the reference documents.
-4. When mentioning technical terms, add simple explanations in parentheses.
-5. **Hybrid grounding (RAG + general expertise)**: Prioritize and cite the reference documents. Where they are thin, missing, or do not cover this data modality, supplement with your own expert data-quality knowledge — but clearly distinguish the basis so the user can judge reliability:
-   - Document-grounded → "**문서 전체 이름**에 따르면..." (bold citation).
-   - General-expertise (not in the documents) → mark with "(일반 지식)".
-   Do NOT contradict the documents; use general knowledge only to fill gaps. Do not invent fake sources or fabricated statistics.
-6. When citing a reference document, use its FULL NAME with bold.
-7. You MUST use Markdown tables where appropriate (e.g., technique comparisons). Tables render correctly in our frontend.
+## 지표 한글명 (영문 키가 보이면 반드시 아래 한글명으로 바꿔 표기)
+completeness / completeness_text / completeness_image = 완전성
+uniqueness = 고유성(중복도)
+validity = 유효성
+consistency = 일관성
+outlier_ratio = 이상치 비율
+class_balance = 클래스 균형
+feature_correlation = 특성 상관도
+value_accuracy = 값 정확도
+label_consistency = 레이블 일관성
+feature_informativeness = 특성 정보량
+sample_quality_text / sample_quality_image = 샘플 품질
 
-## Report Structure (follow this EXACTLY)
+## 작성 규칙
+1. 전부 한국어. **간결·명료**하게. 장황한 서술·같은 말 반복·불필요한 미사여구 금지. 각 항목은 핵심만 짧게.
+2. 지표는 위 '지표 한글명'으로만 표기. 영문 키(feature_informativeness 등)를 그대로 노출하지 말 것.
+3. 근거(출처) 표기 — 매우 중요:
+   - 참조 자료 내용을 쓸 땐 그 기법의 **실제 출처(도구·표준·기관)**를 자연스러운 문장으로 밝힌다.
+     예: "pandas 공식 가이드에서 권장하듯", "scikit-learn 문서에 따르면", "imbalanced-learn이 제안하는",
+     "ISO/IEC 25012 표준이 정의한", "cleanlab의 Confident Learning 기법에서 제시한".
+   - 금지: "문서 3", "문서 5" 같은 내부 문서 번호·명칭 (사용자는 그 문서를 볼 수 없다).
+   - 금지: 출처·강조를 별표(`**...**`)로 감싸기 — 한글 조사가 뒤에 붙으면 렌더링이 깨져 별표가 그대로 보인다. 강조는 별표 없이 평문으로.
+   - 참조 자료에 없는 일반 상식으로 보충할 땐 문장 끝에 "(일반 지식)" 표시. 가짜 출처·수치 날조 금지.
+4. 기술 용어엔 괄호로 짧은 설명. 기법 비교는 마크다운 표 사용(프론트에서 정상 렌더).
+5. **아래 구조만** 출력. 구조 밖 섹션(최종 정리·추가 권장사항·모니터링 표 등)을 임의로 덧붙이지 말 것.
+
+## 출력 구조 (이대로만, 짧게)
 
 ### 📊 종합 평가
-> 전체 점수와 등급을 한 문장으로 요약
+> 종합 점수·등급 + 한 문장 핵심 진단. (강점은 여기서 한 줄로만 언급, 별도 섹션 만들지 말 것)
 
-**주요 지표 현황:**
-- ✅ **지표명** — 점수% (간단한 한 줄 해석)
-- ✅ **지표명** — 점수%
-- ⚠️ **지표명** — 점수% ← 개선 필요
-- ❌ **지표명** — 점수% ← 심각
+**지표 현황** (점수 높은 순, 모든 지표):
+- ✅ 완전성 — 96% · 결측 거의 없음
+- ⚠️ 고유성 — 72% · 일부 중복
+- ❌ 클래스 균형 — 25% · 심각한 불균형
 
-(✅=90%이상 양호, ⚠️=80~90% 주의, ❌=80%미만 심각. 진단 결과의 모든 지표를 점수 높은 순으로 나열)
-
----
-
-### ✅ 강점 분석
-(90% 이상인 지표들을 간략히 설명. 각 지표 2문장 이내로 핵심만)
-
----
+(기준: ✅ 90%↑ · ⚠️ 80~90% · ❌ 80%↓. 해석은 한 줄로 짧게.)
 
 ### 🔧 개선 필요 항목
-(80% 미만인 지표를 심각도 순으로 상세 분석. 각 항목은 아래 형식:)
+(80% 미만 지표만, 심각도 높은 순. 각 항목 아래 형식으로 짧게:)
 
-#### ❌ 지표명 (점수%) — 심각도: 높음
+#### ❌ 레이블 일관성 (30%)
+- 현황: 한 문장.
+- 영향: 사용 목적에 미치는 영향 한 문장.
+- 해결: 아래 표(3행 이내). 출처는 자연스러운 문장으로 셀 안 또는 표 바로 위 한 줄에.
 
-**현황:** 현재 상태를 구체적 수치와 함께 1~2문장으로 설명
-
-**문제점:** 이 문제가 사용 목적(모델 학습 등)에 미치는 영향 1~2문장
-
-**해결 방안:** (참조 문서 기반으로 구체적 기법을 표로 정리)
-
-| 기법 | 설명 | 적용 조건 |
+| 기법 | 방법 | 적용 조건 |
 |------|------|-----------|
-| 기법명 | 설명 | 조건 |
+| … | … | … |
 
----
+### 🚀 우선 실행 3가지
+1. (지표) — 목표 한 줄 + 핵심 단계 1~2개
+2. …
+3. …
 
-### 🚀 실행 가이드
-(가장 시급한 개선 3가지를 우선순위별로 정리)
-
-**1순위: 제목**
-- 목표: 한 줄
-- 구체적 실행 단계 2~3개
-
-**2순위: 제목**
-- 목표: 한 줄
-- 구체적 실행 단계 2~3개
-
-**3순위: 제목**
-- 목표: 한 줄
-- 구체적 실행 단계 2~3개
-
-Write the report:
+Write the guide:
 """
 
 
@@ -291,17 +283,17 @@ _SOURCE_DISPLAY_NAMES = {
 def _build_context(search_results: list[dict]) -> str:
     """검색 결과를 프롬프트용 컨텍스트 문자열로 변환"""
     context_parts = []
-    for i, result in enumerate(search_results, 1):
+    for result in search_results:
         source = result["metadata"].get("source_file", "unknown")
         section = result["metadata"].get("section", "")
         subsection = result["metadata"].get("subsection", "")
 
-        # 사람이 읽을 수 있는 출처명 사용
+        # 사람이 읽을 수 있는 출처명 사용. 'Document N' 같은 번호는 넣지 않는다
+        # (LLM이 "문서 3" 식으로 인용하는 것을 막기 위함 — 사용자는 내부 문서를 볼 수 없음).
         display_name = _SOURCE_DISPLAY_NAMES.get(source, source)
-        location = " > ".join(filter(None, [display_name, section, subsection]))
-        context_parts.append(
-            f"[Document {i}] ({location})\n{result['content']}"
-        )
+        loc = " > ".join(filter(None, [section, subsection]))
+        header = f"[참고자료: {display_name}" + (f" — {loc}" if loc else "") + "]"
+        context_parts.append(f"{header}\n{result['content']}")
 
     return "\n\n---\n\n".join(context_parts)
 
