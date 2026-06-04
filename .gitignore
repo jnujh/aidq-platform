@@ -81,6 +81,23 @@ scripts/
 test_data/
 
 # ========================
+# 로컬 작업 잡파일 (커밋 대상 아님)
+# - 이미지 중복본은 frontend/src/assets/ 에 정본 존재
+# - CSV 샘플과 작업용 zip은 로컬 확인용
+# ========================
+/google1.png
+/iso.png
+/iso1.png
+/kaggle1.png
+/result.png
+/files.zip
+/files/
+/seoul_pop*.csv
+/서울 체류인구*.csv
+/frontend/jobs.png
+/frontend/src/assets/ree.png
+
+# ========================
 # AI 설정 (개인용)
 # ========================
 CLAUDE.md
