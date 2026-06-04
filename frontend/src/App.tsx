@@ -35,7 +35,6 @@ import BeforeAfterSection from './components/landing/BeforeAfterSection';
 import ValidationSection from './components/landing/ValidationSection';
 import ResearchBackedSection from './components/landing/ResearchBackedSection';
 import RagSearchSection from './components/landing/RagSearchSection';
-import AIAssistantSection from './components/landing/AIAssistantSection';
 import TestimonialsSection from './components/landing/TestimonialsSection';
 import FAQSection from './components/landing/FAQSection';
 import FinalCTASection from './components/landing/FinalCTASection';
