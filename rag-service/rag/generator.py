@@ -5,6 +5,7 @@ Generation: Claude API로 최종 응답 생성
 """
 import os
 import json
+import re
 
 import anthropic
 
@@ -314,6 +315,17 @@ def _build_context(search_results: list[dict]) -> str:
     return "\n\n---\n\n".join(context_parts)
 
 
+def _salvage_weights(text: str, keys: list[str]) -> dict:
+    """JSON이 잘려 파싱 실패해도 weights 정수만 정규식으로 복구 (weights는 JSON 앞부분이라 보통 온전).
+    모든 기대 지표가 잡힐 때만 반환(부분이면 무효)."""
+    out = {}
+    for k in keys:
+        m = re.search(rf'"{re.escape(k)}"\s*:\s*(\d+)', text)
+        if m:
+            out[k] = int(m.group(1))
+    return out if len(out) == len(keys) else {}
+
+
 def generate_weights(purpose: str, search_results: list[dict],
                      data_type: str | None = None) -> dict:
     """1단계: 검색 결과를 바탕으로 가중치 추천 생성 (모달리티 인식).
@@ -346,35 +358,36 @@ def generate_weights(purpose: str, search_results: list[dict],
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     response = client.messages.create(
         model="claude-haiku-4-5-20251001",
-        max_tokens=4000,
+        # 10지표(이미지/텍스트) × 하이브리드 근거는 길어서 4000이면 JSON이 잘려 파싱 실패함 → 8000.
+        max_tokens=8000,
         messages=[{"role": "user", "content": prompt}],
     )
 
     response_text = _strip_code_block(response.content[0].text.strip())
 
-    try:
-        result = json.loads(response_text)
-        weights = result.get("weights", {})
-        reasoning = result.get("reasoning", "")
-
-        # 가중치 합계 검증
+    def _normalize_to_ratio(weights):
         total = sum(weights.values())
         if total != 100:
-            # 합계가 100이 아니면 정규화
             factor = 100 / total if total > 0 else 1
             weights = {k: round(v * factor) for k, v in weights.items()}
-            # 반올림 오차 보정
             diff = 100 - sum(weights.values())
             if diff != 0:
                 max_key = max(weights, key=weights.get)
                 weights[max_key] += diff
+        return {k: v / 100.0 for k, v in weights.items()}
 
-        # 가중치를 0~1 비율로 변환 (프론트엔드 호환)
-        weights_ratio = {k: v / 100.0 for k, v in weights.items()}
+    try:
+        result = json.loads(response_text)
+        weights = {k: result["weights"][k] for k in metric_keys}  # 기대 지표만
+        return {"weights": _normalize_to_ratio(weights),
+                "reasoning": result.get("reasoning", "")}
 
-        return {"weights": weights_ratio, "reasoning": reasoning}
-
-    except (json.JSONDecodeError, KeyError):
+    except (json.JSONDecodeError, KeyError, TypeError):
+        # 응답이 잘렸어도(reasoning 길어 truncation) weights 블록은 JSON 앞부분이라 정규식으로 복구.
+        salvaged = _salvage_weights(response_text, metric_keys)
+        if salvaged:
+            return {"weights": _normalize_to_ratio(salvaged),
+                    "reasoning": "[부분 복구] 근거 설명이 길어 일부 생략됐지만, LLM이 추천한 가중치는 정상 반영했습니다."}
         return {
             "weights": dict(spec["fallback"]),
             "reasoning": f"[파싱 실패] 기본 가중치를 반환합니다. 원본 응답: {response_text[:200]}",
@@ -400,7 +413,8 @@ def generate_report(diagnosis_result: dict, purpose: str, search_results: list[d
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     response = client.messages.create(
         model="claude-haiku-4-5-20251001",
-        max_tokens=4000,
+        # 10지표 + 개선항목 표가 길어 잘리지 않도록 상향(가중치 추천과 동일 사유).
+        max_tokens=8000,
         messages=[{"role": "user", "content": prompt}],
     )
 
