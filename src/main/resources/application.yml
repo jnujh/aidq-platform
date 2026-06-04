@@ -41,6 +41,9 @@ rag:
 
 server:
   port: 8080
+  # nginx(HTTPS) 리버스 프록시 뒤에서 X-Forwarded-* 인식 → scheme/host 정상 복원
+  # (same-origin 오판으로 인한 "Invalid CORS request" 403 방지)
+  forward-headers-strategy: framework
 
 cloud:
   aws:

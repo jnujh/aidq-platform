@@ -14,6 +14,24 @@ const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
   FAILED: { color: 'red', label: '실패' },
 };
 
+// 데이터 유형 표시: modality(image/text/tabular) 우선, 없으면 dataType으로 보정
+const DATA_TYPE_CONFIG: Record<string, { color: string; label: string }> = {
+  image: { color: 'purple', label: '이미지' },
+  text: { color: 'geekblue', label: '텍스트' },
+  tabular: { color: 'cyan', label: '정형 CSV' },
+};
+
+function resolveDataType(
+  modality: string | null,
+  dataType: string | null
+): { color: string; label: string } | null {
+  if (modality && DATA_TYPE_CONFIG[modality]) return DATA_TYPE_CONFIG[modality];
+  if (dataType === 'STRUCTURED') return DATA_TYPE_CONFIG.tabular;
+  if (dataType === 'UNSTRUCTURED') return { color: 'default', label: '비정형' };
+  if (dataType === 'MULTIMODAL') return { color: 'gold', label: '멀티모달' };
+  return null; // 판별 전
+}
+
 export default function JobsPage() {
   const navigate = useNavigate();
   const [jobs, setJobs] = useState<JobStatusResponse[]>([]);
@@ -121,7 +139,14 @@ export default function JobsPage() {
       dataIndex: 'dataType',
       key: 'dataType',
       width: 120,
-      render: (dataType: string | null) => dataType || <Text type="secondary">판별 전</Text>,
+      render: (_: string | null, record: JobStatusResponse) => {
+        const cfg = resolveDataType(record.modality, record.dataType);
+        return cfg ? (
+          <Tag color={cfg.color}>{cfg.label}</Tag>
+        ) : (
+          <Text type="secondary">판별 전</Text>
+        );
+      },
     },
     {
       title: '상태',

@@ -6,31 +6,6 @@ import {
   IconWand,
 } from '@tabler/icons-react';
 import { BRAND } from '../../config/brand';
-import structureImg from '../../assets/structure.png';
-import imgImg from '../../assets/img.png';
-import textImg from '../../assets/text.png';
-
-const DATA_TYPES: Array<{
-  src: string;
-  title: string;
-  desc: string;
-}> = [
-  {
-    src: structureImg,
-    title: '정형 데이터',
-    desc: 'CSV · 엑셀 · JSON · DB 테이블',
-  },
-  {
-    src: imgImg,
-    title: '이미지 데이터',
-    desc: '이미지 폴더 · ZIP (분류 작업용)',
-  },
-  {
-    src: textImg,
-    title: '텍스트 데이터',
-    desc: '문서 · 로그 · 뉴스·리뷰 (분류·회귀)',
-  },
-];
 
 const USAGES: Array<{
   Icon: typeof IconReportAnalytics;
@@ -100,68 +75,6 @@ export default function AIAssistantSection() {
             데이터 종류에 따라 입력 화면이 달라지고, 그에 맞춰 AI가 진단 결과를 풀어서 알려드립니다.
           </p>
         </div>
-
-        <Flex gap={20} wrap="wrap" align="stretch" style={{ marginBottom: 28 }}>
-          {DATA_TYPES.map(({ src, title, desc }) => (
-            <div
-              key={title}
-              style={{
-                flex: '1 1 280px',
-                minWidth: 0,
-                background: BRAND.colors.surfaces.subtle,
-                border: '1px solid #E8EEF5',
-                borderRadius: 16,
-                padding: 16,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 12,
-              }}
-            >
-              <div
-                style={{
-                  background: '#fff',
-                  borderRadius: 10,
-                  padding: 10,
-                  boxShadow: '0 6px 16px rgba(4, 44, 83, 0.08)',
-                  aspectRatio: '1 / 1.1',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <img
-                  src={src}
-                  alt={`${title} 업로드 화면`}
-                  style={{
-                    width: '100%',
-                    maxHeight: '100%',
-                    display: 'block',
-                    borderRadius: 6,
-                    objectFit: 'contain',
-                  }}
-                />
-              </div>
-              <div
-                style={{
-                  fontSize: BRAND.fontSize.subtitleSmall,
-                  fontWeight: BRAND.fontWeight.semibold,
-                  color: BRAND.colors.primaryDark,
-                }}
-              >
-                {title}
-              </div>
-              <div
-                style={{
-                  fontSize: BRAND.fontSize.bodySmall,
-                  color: '#555',
-                  lineHeight: 1.5,
-                }}
-              >
-                {desc}
-              </div>
-            </div>
-          ))}
-        </Flex>
 
         <Flex gap={16} wrap="wrap" align="stretch">
           {USAGES.map(({ Icon, title, body }) => (

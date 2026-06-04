@@ -301,12 +301,12 @@ export default function ResultPage() {
         <>
           <Divider />
           <Card
-            title={<><FileTextOutlined /> LLM 분석 리포트</>}
+            title={<><FileTextOutlined /> 데이터 품질 개선 가이드</>}
             style={{ marginTop: 24, borderRadius: 12 }}
           >
             <div className="markdown-content" style={{
-              lineHeight: 1.8,
-              fontSize: 14,
+              lineHeight: 1.85,
+              fontSize: 15,
             }}>
               <Markdown remarkPlugins={[remarkGfm]}>{report}</Markdown>
             </div>

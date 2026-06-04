@@ -146,10 +146,10 @@ export default function WeightsPage() {
         <>
           {recommended && reasoning && (
             <Card
-              title="LLM 추천 이유"
+              title="평가지표 가중치 설정 가이드"
               style={{ marginBottom: 24, background: '#f0f5ff', border: '1px solid #adc6ff' }}
             >
-              <div className="markdown-content" style={{ lineHeight: 1.8, fontSize: '14px' }}>
+              <div className="markdown-content" style={{ lineHeight: 1.85, fontSize: '15px' }}>
                 <Markdown remarkPlugins={[remarkGfm]}>{reasoning}</Markdown>
               </div>
             </Card>

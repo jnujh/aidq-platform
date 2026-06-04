@@ -10,6 +10,8 @@ export interface JobStatusResponse {
   jobName: string | null;
   originalFilename: string;
   dataType: string | null;
+  // 진단 모달리티: 'image' | 'text' | 'tabular'. null이면 정형(tabular).
+  modality: string | null;
   status: string;
   createdAt: string;
   updatedAt: string;

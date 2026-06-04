@@ -24,17 +24,30 @@ def merge_partial_results(partial_results, global_stats, weights=None):
     categorical_cols = global_stats['categorical_cols']
     quantiles = global_stats.get('quantiles', {})
 
-    # completeness
+    # 세분화 진단: 컬럼별 점수를 평균 직전에 보관(부가 산출, 점수 불변).
+    by_col = {'completeness': {}, 'validity': {}, 'consistency': {}, 'outlier_ratio': {}}
+
+    # completeness (전체 + 컬럼별)
     miss = sum(p['completeness']['missing_count'] for p in partial_results)
     cells = sum(p['completeness']['total_cells'] for p in partial_results)
     completeness = 1.0 if cells == 0 else 1.0 - miss / cells
+    total_rows_c = sum(p['completeness'].get('n_rows', 0) for p in partial_results)
+    if total_rows_c > 0:
+        col_miss = {}
+        for p in partial_results:
+            for col, m in p['completeness'].get('missing_by_col', {}).items():
+                col_miss[col] = col_miss.get(col, 0) + m
+        by_col['completeness'] = {col: round(1.0 - m / total_rows_c, 4)
+                                  for col, m in col_miss.items()}
 
     # validity (컬럼별 비율 → 컬럼 평균)
     v_scores = []
     for col in numerical_cols + categorical_cols:
         valid = sum(p['validity'].get(col, {}).get('valid', 0) for p in partial_results)
         total = sum(p['validity'].get(col, {}).get('total', 0) for p in partial_results)
-        v_scores.append(1.0 if total == 0 else valid / total)
+        score = 1.0 if total == 0 else valid / total
+        v_scores.append(score)
+        by_col['validity'][col] = round(score, 4)
     validity = _mean(v_scores)
 
     # consistency (범주형만)
@@ -42,7 +55,9 @@ def merge_partial_results(partial_results, global_stats, weights=None):
     for col in categorical_cols:
         suffix = sum(p['consistency'].get(col, {}).get('suffix_count', 0) for p in partial_results)
         total = sum(p['consistency'].get(col, {}).get('total', 0) for p in partial_results)
-        c_scores.append(1.0 if total == 0 else 1.0 - suffix / total)
+        score = 1.0 if total == 0 else 1.0 - suffix / total
+        c_scores.append(score)
+        by_col['consistency'][col] = round(score, 4)
     consistency = _mean(c_scores)
 
     # outlier_ratio (전역 Q1/Q3, 컬럼 전체 기준 분기)
@@ -52,12 +67,15 @@ def merge_partial_results(partial_results, global_stats, weights=None):
         oc = sum(p['outlier'].get(col, {}).get('outlier_count', 0) for p in partial_results)
         if col not in quantiles:
             o_scores.append(1.0)
+            by_col['outlier_ratio'][col] = 1.0
             continue
         iqr = quantiles[col]['q3'] - quantiles[col]['q1']
         if total < 4 or iqr == 0:
-            o_scores.append(1.0)
+            score = 1.0
         else:
-            o_scores.append(1.0 - oc / total)
+            score = 1.0 - oc / total
+        o_scores.append(score)
+        by_col['outlier_ratio'][col] = round(score, 4)
     outlier_ratio = _mean(o_scores)
 
     # class_balance (Counter 병합)
@@ -121,8 +139,18 @@ def merge_partial_results(partial_results, global_stats, weights=None):
     elif score >= 75: grade = 'B'
     elif score >= 60: grade = 'C'
     else:             grade = 'D'
+
+    # 세분화 진단: 컬럼별 분해 + 타깃 클래스 분포(점수 불변 부가 필드)
+    def _asc(d):
+        return dict(sorted(d.items(), key=lambda kv: kv[1]))
+    group_breakdown = {
+        'unit': 'column',
+        'metrics': {k: _asc(v) for k, v in by_col.items() if v},
+        'counts': {str(k): int(c) for k, c in total_counts.items()},
+    }
     return {'score': round(score, 2), 'grade': grade,
-            **{k: round(v, 4) for k, v in metrics.items()}}
+            **{k: round(v, 4) for k, v in metrics.items()},
+            'groupBreakdown': group_breakdown}
 
 
 def build_result_message(job_id, merged, global_stats, total_rows):
@@ -133,7 +161,9 @@ def build_result_message(job_id, merged, global_stats, total_rows):
     n_cols = len(numerical_cols) + len(categorical_cols)
 
     result_detail = {
-        'metrics': {k: v for k, v in merged.items() if k not in ('score', 'grade')},
+        'metrics': {k: v for k, v in merged.items()
+                    if k not in ('score', 'grade', 'groupBreakdown')},
+        'groupBreakdown': merged.get('groupBreakdown'),
         'columns': [{'name': c, 'type': 'numeric' if c in numerical_cols else 'categorical'}
                     for c in numerical_cols + categorical_cols],
         'summary': f'종합 점수 {merged["score"]}점 ({merged["grade"]}등급). '
