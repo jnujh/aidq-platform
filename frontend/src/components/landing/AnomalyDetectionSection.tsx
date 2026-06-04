@@ -81,9 +81,18 @@ const ANOMALIES: Anomaly[] = [
     badgeBg: '#E0E7FF',
     badgeText: '#1E3A8A',
     visual: (
-      <span style={{ fontSize: 44, display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+      <span
+        style={{
+          fontSize: 44,
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 8,
+        }}
+      >
         <span>👤</span>
-        <span style={{ fontSize: 28, color: '#999' }}>→</span>
+        <span>👤</span>
+        <span style={{ fontSize: 30, color: '#dc2626', fontWeight: 700 }}>→</span>
+        <span style={{ filter: 'grayscale(0.4)' }}>🤖</span>
         <span style={{ filter: 'grayscale(0.4)' }}>🤖</span>
       </span>
     ),
@@ -189,6 +198,7 @@ export default function AnomalyDetectionSection() {
                   fontWeight: BRAND.fontWeight.semibold,
                   color: BRAND.colors.primaryDark,
                   lineHeight: 1.3,
+                  minHeight: '2.6em',
                 }}
               >
                 {a.title}
@@ -198,6 +208,7 @@ export default function AnomalyDetectionSection() {
                   fontSize: BRAND.fontSize.bodySmall,
                   color: '#555',
                   lineHeight: 1.55,
+                  minHeight: '4.65em',
                 }}
               >
                 {a.desc}

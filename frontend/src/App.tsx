@@ -132,11 +132,18 @@ const STANDALONE_PAGES: Record<string, StandalonePageEntry> = {
         <SupportedDataSection />
         <UploadFlowSection />
         <AutoDetectionSection />
+      </>
+    ),
+  },
+  '/platform/metrics': {
+    id: 'metrics',
+    content: (
+      <>
+        <MetricsSection />
         <CellMatrixSection />
       </>
     ),
   },
-  '/platform/metrics': { id: 'metrics', content: <MetricsSection /> },
   '/platform/preview': { id: 'preview', content: <ResultPreviewSection /> },
   '/platform/guide': { id: 'guide', content: <HowItWorksSection /> },
   '/platform/pipeline': { id: 'pipeline', content: <PipelineSection /> },

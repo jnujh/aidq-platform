@@ -36,14 +36,13 @@ const ROWS: Row[] = [
     label: 'Image',
     classification: {
       available: true,
-      metricsCount: 10,
-      topMetrics: ['sample_quality_image 0.15', 'class_balance 0.18'],
+      metricsCount: 11,
+      topMetrics: ['label_consistency 0.20', 'completeness_image 0.15'],
     },
     regression: {
-      available: false,
-      metricsCount: null,
-      topMetrics: [],
-      note: '이미지 회귀는 일반적으로 활용되지 않아 미지원',
+      available: true,
+      metricsCount: 11,
+      topMetrics: ['target_smoothness 0.20', 'completeness_image 0.15'],
     },
   },
   {

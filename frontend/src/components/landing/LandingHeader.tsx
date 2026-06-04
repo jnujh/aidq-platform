@@ -13,7 +13,7 @@ const menuItems = [
     label: 'Platform',
     children: [
       { key: 'service', label: 'AI 진단 방식' },
-      { key: 'metrics', label: '8개 측정 지표' },
+      { key: 'metrics', label: '측정 지표' },
       { key: 'preview', label: '진단 결과 미리보기' },
       { key: 'guide', label: '사용 가이드' },
       { key: 'pipeline', label: '시스템 구조' },
