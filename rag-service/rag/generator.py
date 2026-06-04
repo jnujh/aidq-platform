@@ -366,12 +366,17 @@ def generate_weights(purpose: str, search_results: list[dict],
                 weights[max_key] += diff
         return {k: v / 100.0 for k, v in weights.items()}
 
-    # PART1: 가중치 JSON 블록(펜스 우선, 없으면 첫 {...})만 파싱 → reasoning은 JSON 밖이라 escape/잘림 영향 없음.
-    jm = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', text, re.DOTALL) or re.search(r'(\{.*?\})', text, re.DOTALL)
+    # PART1: 가중치 JSON 블록 파싱 (펜스 우선). LLM이 평평한 {...} 또는 중첩
+    # {"weights": {...}, "reasoning": "..."} 형태로 줄 수 있어 둘 다 처리한다(greedy로 중첩 전체 포착).
+    jm = re.search(r'```(?:json)?\s*(\{.*\})\s*```', text, re.DOTALL) or re.search(r'(\{.*\})', text, re.DOTALL)
     weights = None
+    reasoning_from_json = ""
     if jm:
         try:
             parsed = json.loads(jm.group(1))
+            if isinstance(parsed.get("weights"), dict):  # 중첩 형태면 한 겹 풀고 reasoning도 회수
+                reasoning_from_json = str(parsed.get("reasoning") or "")
+                parsed = parsed["weights"]
             weights = {k: int(parsed[k]) for k in metric_keys}
         except Exception:
             weights = None
@@ -381,9 +386,12 @@ def generate_weights(purpose: str, search_results: list[dict],
         return {"weights": dict(spec["fallback"]),
                 "reasoning": f"[파싱 실패] 기본 가중치를 반환합니다. 원본 응답: {text[:200]}"}
 
-    # PART2: JSON 블록 이후 평문 = reasoning (===REASONING=== 마커 제거)
-    rest = text[jm.end():] if jm else ""
-    reasoning = re.sub(r'={2,}\s*REASONING\s*={2,}', '', rest, flags=re.IGNORECASE).strip()
+    # PART2: reasoning = 중첩 JSON 안의 reasoning(있으면) 우선, 없으면 JSON 블록 이후 평문(===REASONING=== 마커 제거)
+    if reasoning_from_json.strip():
+        reasoning = reasoning_from_json.strip()
+    else:
+        rest = text[jm.end():] if jm else ""
+        reasoning = re.sub(r'={2,}\s*REASONING\s*={2,}', '', rest, flags=re.IGNORECASE).strip()
     if not reasoning:
         reasoning = "(근거 설명이 생성되지 않았습니다.)"
     return {"weights": _normalize_to_ratio(weights), "reasoning": reasoning}
