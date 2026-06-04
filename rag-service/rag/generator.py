@@ -24,8 +24,10 @@ Our platform diagnoses {modality_label} data. You must recommend weights for the
 1. Each weight must be an integer between 0 and 100
 2. All weights must sum to exactly 100
 3. Weight of 0 means the metric is disabled (not evaluated)
-4. **Grounding**: 참조 자료가 관련 있으면 그 기법의 실제 출처(도구·표준·기관)를 자연스러운 문장으로 밝혀 인용한다. 예: "scikit-learn 가이드에 따르면", "ISO/IEC 25012 표준이 정의한", "imbalanced-learn이 제안하는". 자료가 부족하거나 없으면 데이터 품질 전문가로서 자신감 있게 권고하되 출처를 지어내지 말 것.
-   ⚠️ "문서 3" 같은 내부 문서 번호·명칭 금지(사용자는 못 봄). ⚠️ "(일반 지식)" 같은 꼬리표 금지 — 전문성이 떨어져 보인다. 모든 서술을 전문가의 확신 있는 권고로 자연스럽게 쓸 것.
+4. **Grounding (인용 방식 매우 중요)**: 자료(Source)가 관련 있으면 그 **실제 데이터셋·도구·표준 이름을 직접 대고**, 그 사례에서 무엇이 중요했는지를 근거로 본 데이터에 유추 연결한다.
+   - 좋은 예: "Telco 고객 이탈 데이터셋 분석에서는 클래스 불균형이 모델 성능을 좌우했으므로, 본 데이터에서도 클래스 균형을 우선해야 합니다."
+   - 나쁜 예(금지): "참고 자료의 Telco 데이터셋에서…", "참고 자료에서 언급했듯이…", "문서 3에 따르면…". → 사용자는 '참고 자료/문서'가 뭔지 모른다. 그 단어 자체를 쓰지 말 것.
+   - 자료가 없으면 데이터 품질 전문가로서 자신감 있게 권고하되 출처를 지어내지 말 것. "(일반 지식)" 같은 꼬리표 금지.
 5. Write your reasoning in Korean (한국어).
 6. Be specific and concrete — tie each weight to either a cited source or a clearly-marked expert rationale. Avoid vague generic advice.
 7. 근거 인용 시 별표(`**...**`)로 감싸지 말 것 — 한글 조사가 뒤에 붙으면 렌더링이 깨져 별표가 그대로 노출된다. 강조는 별표 없이 평문으로.
@@ -163,10 +165,9 @@ sample_quality_text / sample_quality_image = 샘플 품질
 1. 전부 한국어. **간결·명료**하게. 장황한 서술·같은 말 반복·불필요한 미사여구 금지. 각 항목은 핵심만 짧게.
 2. 지표는 위 '지표 한글명'으로만 표기. 영문 키(feature_informativeness 등)를 그대로 노출하지 말 것.
 3. 근거(출처) 표기 — 매우 중요:
-   - 참조 자료 내용을 쓸 땐 그 기법의 **실제 출처(도구·표준·기관)**를 자연스러운 문장으로 밝힌다.
-     예: "pandas 공식 가이드에서 권장하듯", "scikit-learn 문서에 따르면", "imbalanced-learn이 제안하는",
-     "ISO/IEC 25012 표준이 정의한", "cleanlab의 Confident Learning 기법에서 제시한".
-   - 금지: "문서 3", "문서 5" 같은 내부 문서 번호·명칭 (사용자는 그 문서를 볼 수 없다).
+   - 자료(Source)를 쓸 땐 그 **실제 데이터셋·도구·표준 이름을 직접 대고** 사례로 연결한다.
+     좋은 예: "Telco 고객 이탈 데이터셋 분석에서는 결측이 소수 클래스 손실로 이어졌으므로, 본 데이터에서도 완전성을 우선해야 합니다.", "imbalanced-learn이 제안하는 SMOTE", "ISO/IEC 25012 표준이 정의한".
+   - 금지: "참고 자료의 ~", "참고 자료에서 ~", "문서 3", "문서 5" 같은 내부 지칭어 (사용자는 '참고 자료/문서'가 뭔지 모른다 — 그 단어 자체를 쓰지 말 것).
    - 금지: 출처·강조를 별표(`**...**`)로 감싸기 — 한글 조사가 뒤에 붙으면 렌더링이 깨져 별표가 그대로 보인다. 강조는 별표 없이 평문으로.
    - 참조 자료에 없으면 데이터 품질 전문가로서 자신감 있게 권고하되 출처를 지어내지 말 것. ⚠️ "(일반 지식)" 같은 꼬리표는 붙이지 말 것 — 전문성이 떨어져 보인다.
 4. 기술 용어엔 괄호로 짧은 설명. 기법 비교는 마크다운 표 사용(프론트에서 정상 렌더).
@@ -290,7 +291,7 @@ def _build_context(search_results: list[dict]) -> str:
         # (LLM이 "문서 3" 식으로 인용하는 것을 막기 위함 — 사용자는 내부 문서를 볼 수 없음).
         display_name = _SOURCE_DISPLAY_NAMES.get(source, source)
         loc = " > ".join(filter(None, [section, subsection]))
-        header = f"[참고자료: {display_name}" + (f" — {loc}" if loc else "") + "]"
+        header = f"[Source: {display_name}" + (f" — {loc}" if loc else "") + "]"
         context_parts.append(f"{header}\n{result['content']}")
 
     return "\n\n---\n\n".join(context_parts)
