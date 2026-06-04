@@ -81,12 +81,68 @@ def _subsample_feats(feats, labels, cap, random_state=1):
     return feats, y
 
 
-def _finalize(metrics, weights):
-    """metrics dict + 가중치 → {score, grade, <flat 지표>, metrics}. 원본 cell 반환과 동일 구조."""
+def _finalize(metrics, weights, group_breakdown=None):
+    """metrics dict + 가중치 → {score, grade, <flat 지표>, metrics}. 원본 cell 반환과 동일 구조.
+
+    group_breakdown(선택)은 부가 필드로만 부착 — 집계식(score)에는 영향 없음.
+    """
     score = sum(metrics[k] * weights[k] for k in weights) * 100
     rounded = {k: round(float(v), 4) for k, v in metrics.items()}
-    return {'score': round(score, 2), 'grade': to_grade(score),
-            **rounded, 'metrics': rounded}
+    result = {'score': round(score, 2), 'grade': to_grade(score),
+              **rounded, 'metrics': rounded}
+    if group_breakdown is not None:
+        result['groupBreakdown'] = group_breakdown
+    return result
+
+
+# =====================================================================
+# 그룹(클래스)별 분해 — 세분화 진단
+# 설계: docs/sessions/granular-diagnosis/2026-06-04-세분화-진단-설계.md
+# A형 지표(per-item 점수 존재)만 라벨로 group-by. B형(중복/임베딩)은 제외.
+# =====================================================================
+
+def _class_name_fn(class_names):
+    """라벨 정수 → 사람이 읽는 클래스명. class_names 없으면 문자열화."""
+    def name(label):
+        if class_names and 0 <= label < len(class_names):
+            return str(class_names[label])
+        return str(label)
+    return name
+
+
+def _sort_asc(d):
+    """그룹맵을 점수 오름차순(나쁜 그룹 먼저)으로 정렬한 dict 반환."""
+    return dict(sorted(d.items(), key=lambda kv: kv[1]))
+
+
+def _group_breakdown(labels, per_item_metrics, special_metrics, class_names=None):
+    """공통 그룹 분해 빌더.
+
+    labels: per-item 라벨(int) 리스트.
+    per_item_metrics: {metric_name: per_item_value_list} — 그룹별 평균으로 집계할 A형 지표.
+    special_metrics: {metric_name: (per_item_value_list, agg_fn)} — 그룹별 agg_fn(list) 적용(IQR/entropy).
+    반환: {unit, groups, counts, metrics} (metrics 각 지표맵은 오름차순 정렬).
+    """
+    name = _class_name_fn(class_names)
+    idx_by = {}  # 단일 패스: 라벨 카디널리티가 커도 O(n)
+    for i, l in enumerate(labels):
+        idx_by.setdefault(int(l), []).append(i)
+    groups = sorted(idx_by)
+    counts = {name(g): len(idx_by[g]) for g in groups}
+
+    metrics = {}
+    for mname, values in per_item_metrics.items():
+        metrics[mname] = _sort_asc({
+            name(g): round(float(np.mean([values[i] for i in idx_by[g]])), 4)
+            for g in groups
+        })
+    for mname, (values, agg_fn) in special_metrics.items():
+        metrics[mname] = _sort_asc({
+            name(g): round(float(agg_fn([values[i] for i in idx_by[g]])), 4)
+            for g in groups
+        })
+    return {'unit': 'class', 'groups': [name(g) for g in groups],
+            'counts': counts, 'metrics': metrics}
 
 
 # =====================================================================
@@ -147,8 +203,11 @@ def image_map(images, labels, use_embeddings=True):
     return partial
 
 
-def image_reduce(partials, weights=None, use_embeddings=True, random_state=1):
-    """N개 배치 부분결과 → image cell 점수. compute_dsc_image와 동일 출력 구조."""
+def image_reduce(partials, weights=None, use_embeddings=True, random_state=1, class_names=None):
+    """N개 배치 부분결과 → image cell 점수. compute_dsc_image와 동일 출력 구조.
+
+    class_names가 주어지면 클래스별 분해(groupBreakdown)를 부가 산출(점수 불변).
+    """
     w = weights or _img.DEFAULT_WEIGHTS_IMAGE
     mask_ratios, size_keys, mean_intensities = [], [], []
     valids, sample_qualities, hashes, labels, feats = [], [], [], [], []
@@ -183,7 +242,23 @@ def image_reduce(partials, weights=None, use_embeddings=True, random_state=1):
         metrics['feature_correlation'] = 1.0
         metrics['label_consistency'] = 1.0
         metrics['feature_informativeness'] = 1.0
-    return _finalize(metrics, w)
+
+    breakdown = None
+    if labels:
+        breakdown = _group_breakdown(
+            labels,
+            per_item_metrics={
+                'completeness_image': [1.0 - m for m in mask_ratios],
+                'validity': [float(v) for v in valids],
+                'sample_quality_image': sample_qualities,
+            },
+            special_metrics={
+                'outlier_ratio': (mean_intensities, _iqr_outlier_complement),
+                'consistency': (size_keys, _entropy_consistency),
+            },
+            class_names=class_names,
+        )
+    return _finalize(metrics, w, group_breakdown=breakdown)
 
 
 # =====================================================================
@@ -240,8 +315,11 @@ def text_map(texts, labels, use_embeddings=True):
     return partial
 
 
-def text_reduce(partials, weights=None, use_embeddings=True, random_state=1):
-    """N개 배치 부분결과 → text cell 점수. compute_dsc_text와 동일 출력 구조."""
+def text_reduce(partials, weights=None, use_embeddings=True, random_state=1, class_names=None):
+    """N개 배치 부분결과 → text cell 점수. compute_dsc_text와 동일 출력 구조.
+
+    class_names가 주어지면 클래스별 분해(groupBreakdown)를 부가 산출(점수 불변).
+    """
     w = weights or _txt.DEFAULT_WEIGHTS_TEXT
     completeness_ratios, hashes, valids, token_counts = [], [], [], []
     sample_qualities, labels, feats = [], [], []
@@ -292,4 +370,29 @@ def text_reduce(partials, weights=None, use_embeddings=True, random_state=1):
         metrics['feature_correlation'] = 1.0
         metrics['label_consistency'] = 1.0
         metrics['feature_informativeness'] = 1.0
-    return _finalize(metrics, w)
+
+    breakdown = None
+    if labels:
+        # consistency: per-item 길이 버킷 key(원본 _LEN_BUCKETS) → 그룹별 entropy 보수.
+        # _entropy_consistency(bucket_keys)는 위 전역 consistency의 5-슬롯 entropy와 정의상 동치
+        # (둘 다 "등장 버킷 분포의 정규화 entropy 보수"). 한쪽만 고치면 정의가 어긋나니 주의.
+        def _bucket_key(tc):
+            for i in range(len(buckets) - 1):
+                if buckets[i] <= tc < buckets[i + 1]:
+                    return i
+            return -1
+        bucket_keys = [_bucket_key(tc) for tc in token_counts]
+        breakdown = _group_breakdown(
+            labels,
+            per_item_metrics={
+                'completeness_text': [1.0 - r for r in completeness_ratios],
+                'validity': [float(v) for v in valids],
+                'sample_quality_text': sample_qualities,
+            },
+            special_metrics={
+                'outlier_ratio': (token_counts, _iqr_outlier_complement),
+                'consistency': (bucket_keys, _entropy_consistency),
+            },
+            class_names=class_names,
+        )
+    return _finalize(metrics, w, group_breakdown=breakdown)

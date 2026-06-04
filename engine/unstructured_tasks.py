@@ -56,7 +56,9 @@ def _build_result_message(job_id, merged, modality, task, total, class_names):
     kind = '이미지' if modality == 'image' else '텍스트'
     result_detail = {
         # merged는 평평한 지표 + 'metrics'(동일 내용 중첩)를 함께 가지므로 'metrics'도 제외
-        'metrics': {k: v for k, v in merged.items() if k not in ('score', 'grade', 'metrics')},
+        'metrics': {k: v for k, v in merged.items()
+                    if k not in ('score', 'grade', 'metrics', 'groupBreakdown')},
+        'groupBreakdown': merged.get('groupBreakdown'),
         'summary': f'종합 점수 {merged["score"]}점 ({merged["grade"]}등급). '
                    f'{kind} 샘플 {total}건'
                    + (f', 클래스 {len(class_names)}개.' if class_names else '.'),
@@ -190,9 +192,11 @@ def aggregate_unstructured(self, partials, job_id, modality, weights, class_name
             print(f'[비정형 Aggregator] 일부 배치 실패 {len(errors)}개 (계속): {errors[:2]}')
 
         if modality == 'image':
-            merged = seam.image_reduce(good, weights, use_embeddings=USE_EMBEDDINGS)
+            merged = seam.image_reduce(good, weights, use_embeddings=USE_EMBEDDINGS,
+                                       class_names=class_names)
         else:
-            merged = seam.text_reduce(good, weights, use_embeddings=USE_EMBEDDINGS)
+            merged = seam.text_reduce(good, weights, use_embeddings=USE_EMBEDDINGS,
+                                      class_names=class_names)
 
         _publish(_build_result_message(job_id, merged, modality, task, total, class_names))
         print(f'[비정형 Aggregator] jobId={job_id}, modality={modality}, '

@@ -97,7 +97,9 @@ def on_message(ch, method, properties, body):
 
         # 4) 성공 결과 발행
         result_detail = {
-            'metrics': {k: v for k, v in result.items() if k not in ('score', 'grade')},
+            'metrics': {k: v for k, v in result.items()
+                        if k not in ('score', 'grade', 'groupBreakdown')},
+            'groupBreakdown': result.get('groupBreakdown'),
             'columns': [
                 {'name': col, 'type': 'numeric' if col in numerical_cols else 'categorical'}
                 for col in df.columns if col != target_col

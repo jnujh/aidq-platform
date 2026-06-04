@@ -157,6 +157,87 @@ DEFAULT_WEIGHTS = {
 }
 
 
+def column_breakdown(df, target_col, numerical_cols, categorical_cols, reference_df=None):
+    """컬럼별 품질 분해(세분화 진단). calc_* 정의를 컬럼 단위로 미러링 — 부가 산출(점수 불변).
+
+    설계: docs/sessions/granular-diagnosis/2026-06-04-세분화-진단-설계.md
+    반환: {unit: 'column', metrics: {지표: {컬럼: 점수}(오름차순)}, counts: {타깃클래스: 수}}
+    """
+    n_rows = len(df)
+    completeness, validity, consistency, outlier = {}, {}, {}, {}
+
+    feature_df = df.drop(columns=[target_col], errors='ignore')
+    for col in feature_df.columns:
+        if n_rows == 0:
+            completeness[col] = 1.0
+            continue
+        miss = int(feature_df[col].isnull().sum())
+        if col in numerical_cols:
+            miss += int((df[col] == -1).sum())
+        elif col in categorical_cols:
+            miss += int((df[col].astype(str) == 'empty').sum())
+        completeness[col] = round(1.0 - miss / n_rows, 4)
+
+    for col in numerical_cols:
+        if col not in df.columns:
+            continue
+        converted = pd.to_numeric(df[col], errors='coerce')
+        total = len(df[col].dropna())
+        validity[col] = round(float(converted.notna().sum() / total) if total > 0 else 1.0, 4)
+    for col in categorical_cols:
+        if col not in df.columns:
+            continue
+        s = df[col].dropna().astype(str)
+        if len(s) == 0:
+            validity[col] = 1.0
+        else:
+            validity[col] = round(float(s.apply(lambda x: 0 < len(x.strip()) < 200).mean()), 4)
+
+    for col in categorical_cols:
+        if col not in df.columns:
+            continue
+        s = df[col].dropna().astype(str)
+        if len(s) == 0:
+            consistency[col] = 1.0
+        else:
+            consistency[col] = round(1.0 - float(s.apply(lambda x: bool(re.search(r'-\d+$', x))).mean()), 4)
+
+    for col in numerical_cols:
+        if col not in df.columns:
+            continue
+        s = pd.to_numeric(df[col], errors='coerce').dropna()
+        if len(s) < 4:
+            outlier[col] = 1.0
+            continue
+        if reference_df is not None and col in reference_df.columns:
+            ref = pd.to_numeric(reference_df[col], errors='coerce').dropna()
+            q1, q3 = (ref.quantile(0.25), ref.quantile(0.75)) if len(ref) >= 4 \
+                else (s.quantile(0.25), s.quantile(0.75))
+        else:
+            q1, q3 = s.quantile(0.25), s.quantile(0.75)
+        iqr = q3 - q1
+        if iqr == 0:
+            outlier[col] = 1.0
+        else:
+            lower, upper = q1 - 1.5 * iqr, q3 + 1.5 * iqr
+            oc = int(((s < lower) | (s > upper)).sum())
+            outlier[col] = round(1.0 - oc / len(s), 4)
+
+    counts = {}
+    if target_col in df.columns:
+        for label, cnt in df[target_col].value_counts().items():
+            counts[str(label)] = int(cnt)
+
+    def _asc(d):
+        return dict(sorted(d.items(), key=lambda kv: kv[1]))
+
+    metrics = {k: _asc(v) for k, v in {
+        'completeness': completeness, 'validity': validity,
+        'consistency': consistency, 'outlier_ratio': outlier,
+    }.items() if v}
+    return {'unit': 'column', 'metrics': metrics, 'counts': counts}
+
+
 def compute_dsc(df, target_col, numerical_cols, categorical_cols,
                 weights=None, reference_df=None):
     """DSC 점수(0~100) + 등급 + 지표별 점수 반환."""
@@ -177,7 +258,9 @@ def compute_dsc(df, target_col, numerical_cols, categorical_cols,
     elif score >= 60: grade = 'C'
     else:             grade = 'D'
     return {'score': round(score, 2), 'grade': grade,
-            **{k: round(v, 4) for k, v in metrics.items()}}
+            **{k: round(v, 4) for k, v in metrics.items()},
+            'groupBreakdown': column_breakdown(df, target_col, numerical_cols,
+                                               categorical_cols, reference_df=reference_df)}
 
 
 def auto_detect_columns(df):
@@ -240,14 +323,21 @@ def compute_partial_metrics(df, target_col, numerical_cols, categorical_cols, gl
     feature_df = df.drop(columns=[target_col], errors='ignore')
     total_cells = int(feature_df.shape[0] * feature_df.shape[1])
 
-    # completeness: NaN + placeholder(-1, 'empty')
+    # completeness: NaN + placeholder(-1, 'empty'). 컬럼별 카운트도 함께 산출(세분화 진단).
     missing_count = int(feature_df.isnull().sum().sum())
+    missing_by_col = {}
+    for col in feature_df.columns:
+        missing_by_col[col] = int(feature_df[col].isnull().sum())
     for col in numerical_cols:
         if col in df.columns:
-            missing_count += int((df[col] == -1).sum())
+            ph = int((df[col] == -1).sum())
+            missing_count += ph
+            missing_by_col[col] = missing_by_col.get(col, 0) + ph
     for col in categorical_cols:
         if col in df.columns:
-            missing_count += int((df[col].astype(str) == 'empty').sum())
+            ph = int((df[col].astype(str) == 'empty').sum())
+            missing_count += ph
+            missing_by_col[col] = missing_by_col.get(col, 0) + ph
 
     # validity (컬럼별 valid/total)
     validity = {}
@@ -306,7 +396,8 @@ def compute_partial_metrics(df, target_col, numerical_cols, categorical_cols, gl
                 })
 
     return {
-        'completeness': {'missing_count': missing_count, 'total_cells': total_cells},
+        'completeness': {'missing_count': missing_count, 'total_cells': total_cells,
+                         'missing_by_col': missing_by_col, 'n_rows': int(len(df))},
         'validity': validity,
         'consistency': consistency,
         'outlier': calc_outlier_counts(df, numerical_cols, global_q1q3),
