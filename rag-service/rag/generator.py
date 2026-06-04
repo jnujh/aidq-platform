@@ -31,6 +31,7 @@ Our platform diagnoses {modality_label} data. You must recommend weights for the
 5. Write your reasoning in Korean (한국어)
 6. Be specific and concrete — tie each weight to either a cited document or a clearly-marked expert rationale. Avoid vague generic advice.
 7. When citing a reference document, use its FULL NAME, NOT document numbers.
+8. **CRITICAL — use the EXACT metric key names** shown in the JSON template below. Do NOT translate, rename, abbreviate, merge, or "improve" them (e.g., keep `label_consistency` exactly as `label_consistency` — never rewrite it as `label_informativeness`). Output the keys in the SAME ORDER as the template.
 
 ## Reference Documents (from RAG search)
 {context}
@@ -316,6 +317,20 @@ def _salvage_weights(text: str, keys: list[str]) -> dict:
     return out if len(out) == len(keys) else {}
 
 
+def _salvage_weights_positional(text: str, keys: list[str]) -> dict:
+    """모델이 키 이름을 바꿔치기(rename/hallucination)했을 때 위치 기반으로 복구.
+    예: label_consistency를 label_informativeness로 바꿔 출력 → 이름 매칭 실패.
+    PART1 JSON 블록의 정수 값을 등장 순서대로 추출해 기대 키 순서대로 매핑한다.
+    모델은 템플릿이 준 순서를 유지하므로 안전. 값 개수가 정확히 일치할 때만 반환."""
+    jm = (re.search(r'```(?:json)?\s*(\{.*?\})\s*```', text, re.DOTALL)
+          or re.search(r'(\{.*?\})', text, re.DOTALL))
+    block = jm.group(1) if jm else text
+    values = re.findall(r'"[^"]+"\s*:\s*(\d+)', block)
+    if len(values) == len(keys):
+        return {k: int(v) for k, v in zip(keys, values)}
+    return {}
+
+
 def generate_weights(purpose: str, search_results: list[dict],
                      data_type: str | None = None) -> dict:
     """1단계: 검색 결과를 바탕으로 가중치 추천 생성 (모달리티 인식).
@@ -381,7 +396,9 @@ def generate_weights(purpose: str, search_results: list[dict],
         except Exception:
             weights = None
     if weights is None:
-        weights = _salvage_weights(text, metric_keys) or None
+        weights = (_salvage_weights(text, metric_keys)
+                   or _salvage_weights_positional(text, metric_keys)
+                   or None)
     if not weights:
         return {"weights": dict(spec["fallback"]),
                 "reasoning": f"[파싱 실패] 기본 가중치를 반환합니다. 원본 응답: {text[:200]}"}
