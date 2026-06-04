@@ -805,6 +805,286 @@ export default function MetricsSection() {
             이미지 회귀·텍스트 두 셀은 frozen-probe 측정 (DistilBERT 768-d, ResNet18 512-d)
           </p>
         </div>
+
+        {/* ── 학술·표준 근거 ── */}
+        <div style={{ marginTop: 56 }}>
+          <div style={{ textAlign: 'center', marginBottom: 28 }}>
+            <div
+              style={{
+                color: BRAND.colors.primary,
+                fontSize: 11,
+                fontWeight: BRAND.fontWeight.semibold,
+                letterSpacing: 0.5,
+                marginBottom: 10,
+              }}
+            >
+              ACADEMIC FOUNDATION
+            </div>
+            <h3
+              style={{
+                fontSize: BRAND.fontSize.titleSmall,
+                fontWeight: BRAND.fontWeight.semibold,
+                color: BRAND.colors.primaryDark,
+                margin: 0,
+                marginBottom: 8,
+              }}
+            >
+              감으로 만든 지표가 아닙니다
+            </h3>
+            <p
+              style={{
+                fontSize: BRAND.fontSize.body,
+                color: '#666',
+                margin: 0,
+                lineHeight: 1.6,
+                maxWidth: 720,
+                marginLeft: 'auto',
+                marginRight: 'auto',
+              }}
+            >
+              8개 지표·셀별 가중치·임계값은 모두 <strong style={{ color: BRAND.colors.primaryDark }}>국제 표준</strong>과
+              <strong style={{ color: BRAND.colors.primaryDark }}> 동료심사 논문</strong>에 직접 매핑됩니다.
+              RAG 문서로 인덱싱돼 가중치 추천·리포트 생성 시 LLM이 실제로 인용합니다.
+            </p>
+          </div>
+
+          {/* 국제 표준 그룹 */}
+          <div style={{ marginBottom: 24 }}>
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: BRAND.fontWeight.bold,
+                color: BRAND.colors.primary,
+                letterSpacing: 0.5,
+                marginBottom: 12,
+              }}
+            >
+              ISO / IEC 국제 표준
+            </div>
+            <Flex gap={14} wrap="wrap" align="stretch">
+              {[
+                {
+                  badge: 'ISO/IEC 25012',
+                  title: '데이터 품질 일반 모델',
+                  desc: 'SQuaRE 시리즈의 데이터 품질 차원 15개 정의. completeness·validity·consistency·accuracy 등 4개 지표를 직접 매핑.',
+                  url: 'https://www.iso.org/standard/35736.html',
+                },
+                {
+                  badge: 'ISO/IEC 5259-1~4',
+                  title: 'AI / ML 데이터 품질 표준',
+                  desc: 'AI 학습용 데이터에 특화된 신규 표준. ML-특이 지표(class_balance·label_consistency·representativeness)의 공식 근거.',
+                  url: 'https://www.iso.org/standard/81088.html',
+                },
+                {
+                  badge: 'ISO/IEC 25024',
+                  title: '데이터 품질 측정',
+                  desc: '품질을 정량화하는 측정 방법 표준. 8개 지표의 0~1 점수 계산 방식이 이 표준의 측정 패턴을 따름.',
+                  url: 'https://www.iso.org/standard/35749.html',
+                },
+              ].map(({ badge, title, desc, url }) => (
+                <a
+                  key={badge}
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    flex: '1 1 280px',
+                    background: '#fff',
+                    border: '1px solid #E8EEF5',
+                    borderRadius: 14,
+                    padding: 20,
+                    textDecoration: 'none',
+                    color: 'inherit',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 10,
+                  }}
+                >
+                  <span
+                    style={{
+                      alignSelf: 'flex-start',
+                      background: BRAND.colors.surfaces.cardBlue,
+                      color: BRAND.colors.primary,
+                      fontSize: 11,
+                      fontWeight: BRAND.fontWeight.bold,
+                      letterSpacing: 0.5,
+                      padding: '4px 10px',
+                      borderRadius: 6,
+                      fontFamily: '"SF Mono","Menlo","Consolas","DM Mono",monospace',
+                    }}
+                  >
+                    {badge}
+                  </span>
+                  <div
+                    style={{
+                      fontSize: BRAND.fontSize.body,
+                      fontWeight: BRAND.fontWeight.bold,
+                      color: BRAND.colors.primaryDark,
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    {title}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: BRAND.fontSize.bodySmall,
+                      color: '#5A6678',
+                      lineHeight: 1.7,
+                      flex: 1,
+                    }}
+                  >
+                    {desc}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: BRAND.colors.primary,
+                      fontWeight: BRAND.fontWeight.semibold,
+                      letterSpacing: 0.3,
+                    }}
+                  >
+                    iso.org 원문 →
+                  </div>
+                </a>
+              ))}
+            </Flex>
+          </div>
+
+          {/* 학술·산업 가이드 그룹 */}
+          <div>
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: BRAND.fontWeight.bold,
+                color: BRAND.colors.primary,
+                letterSpacing: 0.5,
+                marginBottom: 12,
+              }}
+            >
+              학술 논문 · 산업 가이드
+            </div>
+            <Flex gap={14} wrap="wrap" align="stretch">
+              {[
+                {
+                  badge: 'Google',
+                  title: 'Rules of Machine Learning',
+                  author: 'Martin Zinkevich (Google)',
+                  desc: '데이터 품질 우선순위에 대한 43개 실전 규칙. "데이터 문제는 모델 튜닝으로 못 푼다(Rule #4, #16, #22)"가 플랫폼의 진단 우선 철학의 근거.',
+                  url: 'https://developers.google.com/machine-learning/guides/rules-of-ml',
+                  linkLabel: 'developers.google.com →',
+                },
+                {
+                  badge: 'arXiv 2207.14529',
+                  title: 'Data Quality for ML Tasks',
+                  author: 'Budach et al., 2022',
+                  desc: '품질 차원과 모델 성능 영향을 정량 매핑한 서베이. completeness·class_balance·outlier 영향 매트릭스가 가중치 추천 임계값의 근거.',
+                  url: 'https://arxiv.org/abs/2207.14529',
+                  linkLabel: 'arxiv.org →',
+                },
+                {
+                  badge: 'JAIR 2021',
+                  title: 'Confident Learning · cleanlab',
+                  author: 'Northcutt et al., 2021',
+                  desc: 'ImageNet·CIFAR 등 "골드 스탠다드"에서 실제 라벨 오류를 발견한 알고리즘. 비정형 셀의 label_consistency 지표가 이 cleanlab 구현을 직접 사용.',
+                  url: 'https://arxiv.org/abs/1911.00068',
+                  linkLabel: 'arxiv.org →',
+                },
+              ].map(({ badge, title, author, desc, url, linkLabel }) => (
+                <a
+                  key={badge}
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    flex: '1 1 280px',
+                    background: '#fff',
+                    border: '1px solid #E8EEF5',
+                    borderRadius: 14,
+                    padding: 20,
+                    textDecoration: 'none',
+                    color: 'inherit',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 8,
+                  }}
+                >
+                  <span
+                    style={{
+                      alignSelf: 'flex-start',
+                      background: BRAND.colors.surfaces.cardBlue,
+                      color: BRAND.colors.primary,
+                      fontSize: 11,
+                      fontWeight: BRAND.fontWeight.bold,
+                      letterSpacing: 0.5,
+                      padding: '4px 10px',
+                      borderRadius: 6,
+                      fontFamily: '"SF Mono","Menlo","Consolas","DM Mono",monospace',
+                    }}
+                  >
+                    {badge}
+                  </span>
+                  <div
+                    style={{
+                      fontSize: BRAND.fontSize.body,
+                      fontWeight: BRAND.fontWeight.bold,
+                      color: BRAND.colors.primaryDark,
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    {title}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: '#7A8FA5',
+                      fontStyle: 'italic',
+                    }}
+                  >
+                    {author}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: BRAND.fontSize.bodySmall,
+                      color: '#5A6678',
+                      lineHeight: 1.7,
+                      flex: 1,
+                    }}
+                  >
+                    {desc}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: BRAND.colors.primary,
+                      fontWeight: BRAND.fontWeight.semibold,
+                      letterSpacing: 0.3,
+                    }}
+                  >
+                    {linkLabel}
+                  </div>
+                </a>
+              ))}
+            </Flex>
+          </div>
+
+          {/* 강조 푸터 */}
+          <div
+            style={{
+              marginTop: 24,
+              padding: '14px 18px',
+              background: BRAND.colors.surfaces.subtle,
+              border: `1px dashed ${BRAND.colors.primary}55`,
+              borderRadius: 10,
+              fontSize: BRAND.fontSize.bodySmall,
+              color: BRAND.colors.primaryDark,
+              textAlign: 'center',
+              lineHeight: 1.6,
+            }}
+          >
+            <strong>RAG 인덱싱 완료</strong> — 이 문서들은 ChromaDB에 임베딩으로 인덱싱돼 있어,
+            가중치 추천과 리포트 생성 시 LLM이 실제로 인용합니다. "감"이 아니라 "출처"가 있는 진단.
+          </div>
+        </div>
       </div>
     </section>
   );
