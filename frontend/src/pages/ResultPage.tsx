@@ -158,11 +158,19 @@ export default function ResultPage() {
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    // 진단 진행 중(JOB_NOT_COMPLETED) 응답을 받으면 3초 간격으로 자동 재조회. 최대 ~3분.
+    const POLL_INTERVAL_MS = 3000;
+    const MAX_ATTEMPTS = 60;
+    let attempts = 0;
+
+    const fetchOnce = async () => {
       try {
         const res = await resultsApi.getResult(Number(jobId));
         if (cancelled) return;
         setResult(res.data.data);
+        setError(null);
+        setLoading(false);
 
         if (res.data.data.reportS3Key) {
           try {
@@ -175,19 +183,27 @@ export default function ResultPage() {
       } catch (err) {
         if (cancelled) return;
         const code = getErrorCode(err);
+        if (code === 'JOB_NOT_COMPLETED' && attempts < MAX_ATTEMPTS) {
+          attempts += 1;
+          setError('진단이 진행 중입니다. 완료되면 자동으로 결과가 표시됩니다.');
+          timer = setTimeout(fetchOnce, POLL_INTERVAL_MS);
+          return;
+        }
         if (code === 'JOB_NOT_COMPLETED') {
-          setError('진단이 아직 진행 중입니다. 잠시 후 다시 확인해주세요.');
+          setError('진단이 예상보다 오래 걸리고 있습니다. 잠시 후 새로고침해주세요.');
         } else if (code === 'JOB_NOT_FOUND') {
           setError('존재하지 않는 작업입니다.');
         } else {
           setError(getErrorMessage(err, '결과를 불러오는데 실패했습니다.'));
         }
-      } finally {
-        if (!cancelled) setLoading(false);
+        setLoading(false);
       }
-    })();
+    };
+
+    fetchOnce();
     return () => {
       cancelled = true;
+      if (timer) clearTimeout(timer);
     };
   }, [jobId]);
 
@@ -203,7 +219,9 @@ export default function ResultPage() {
   if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: 80 }}>
-        <Spin size="large" />
+        <Spin size="large" tip={error ?? undefined}>
+          <div style={{ minHeight: 60 }} />
+        </Spin>
       </div>
     );
   }
