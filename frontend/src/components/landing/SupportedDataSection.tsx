@@ -1,15 +1,8 @@
 import { Flex } from 'antd';
-import {
-  IconTable,
-  IconFileText,
-  IconPhoto,
-  IconRocket,
-} from '@tabler/icons-react';
+import { IconTable, IconFileText, IconPhoto } from '@tabler/icons-react';
 import { BRAND } from '../../config/brand';
 
-type StatusBadge =
-  | { kind: 'success'; label: string }
-  | { kind: 'warning'; label: string };
+type StatusBadge = { kind: 'success'; label: string };
 
 const items: Array<{
   Icon: typeof IconTable;
@@ -23,48 +16,30 @@ const items: Array<{
     Icon: IconTable,
     iconColor: BRAND.colors.primary,
     title: '정형 데이터',
-    desc: 'CSV · 엑셀 · DB 테이블',
+    desc: 'CSV · 엑셀 · JSON · DB 테이블',
     status: { kind: 'success', label: '현재 지원' },
     borderColor: '#f0f0f0',
   },
   {
     Icon: IconFileText,
     iconColor: BRAND.colors.primary,
-    title: '비정형 데이터',
-    desc: '텍스트 · 문서 · 로그',
+    title: '텍스트 데이터',
+    desc: '문서 · 로그 · 뉴스·리뷰 (분류·회귀)',
     status: { kind: 'success', label: '현재 지원' },
     borderColor: '#f0f0f0',
   },
   {
     Icon: IconPhoto,
-    iconColor: BRAND.colors.highlights.warning.icon,
-    title: '멀티모달',
-    desc: '이미지 · 영상 · 오디오',
-    status: { kind: 'warning', label: '출시 예정' },
-    borderColor: BRAND.colors.highlights.warning.border,
+    iconColor: BRAND.colors.primary,
+    title: '이미지 데이터',
+    desc: '이미지 폴더 · ZIP (분류 작업용)',
+    status: { kind: 'success', label: '현재 지원' },
+    borderColor: '#f0f0f0',
   },
 ];
 
 function StatusPill({ status }: { status: StatusBadge }) {
-  if (status.kind === 'success') {
-    const c = BRAND.colors.highlights.success;
-    return (
-      <span
-        style={{
-          alignSelf: 'flex-start',
-          background: c.bg,
-          color: c.text,
-          fontSize: 12,
-          fontWeight: BRAND.fontWeight.semibold,
-          padding: '4px 10px',
-          borderRadius: 999,
-        }}
-      >
-        {status.label}
-      </span>
-    );
-  }
-  const c = BRAND.colors.highlights.warning;
+  const c = BRAND.colors.highlights.success;
   return (
     <span
       style={{
@@ -75,12 +50,8 @@ function StatusPill({ status }: { status: StatusBadge }) {
         fontWeight: BRAND.fontWeight.semibold,
         padding: '4px 10px',
         borderRadius: 999,
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 4,
       }}
     >
-      <IconRocket size={12} stroke={2} />
       {status.label}
     </span>
   );

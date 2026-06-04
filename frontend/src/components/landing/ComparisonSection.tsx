@@ -25,7 +25,7 @@ const rows: Array<{ feature: string; ours: Cell; others: Cell }> = [
     others: { kind: 'cross' },
   },
   {
-    feature: '정형·비정형·멀티모달',
+    feature: '정형·비정형 데이터',
     ours: { kind: 'check' },
     others: { kind: 'text', value: '정형만' },
   },

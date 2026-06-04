@@ -1,6 +1,9 @@
+import { useNavigate } from 'react-router-dom';
 import { BRAND } from '../../config/brand';
 
 export default function FinalCTASection() {
+  const navigate = useNavigate();
+
   return (
     <section
       style={{
@@ -29,10 +32,11 @@ export default function FinalCTASection() {
             marginBottom: 24,
           }}
         >
-          회원가입 후 무료로 시작할 수 있습니다
+          회원가입 후 사용할 수 있습니다
         </p>
         <button
           type="button"
+          onClick={() => navigate('/signup')}
           style={{
             background: '#fff',
             color: '#111',
@@ -44,7 +48,7 @@ export default function FinalCTASection() {
             cursor: 'pointer',
           }}
         >
-          무료로 시작하기 →
+          회원가입하기 →
         </button>
       </div>
     </section>

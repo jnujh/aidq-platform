@@ -1,6 +1,10 @@
 import { Button, Flex } from 'antd';
-import { useNavigate } from 'react-router-dom';
 import { BRAND } from '../../config/brand';
+import resultImage from '../../assets/re1.png';
+
+const scrollToId = (id: string) => {
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
 
 const stats = [
   { highlight: '8가지', label: '진단 지표' },
@@ -9,8 +13,6 @@ const stats = [
 ];
 
 export default function HeroSection() {
-  const navigate = useNavigate();
-
   return (
     <section style={{ padding: '80px 48px', background: '#fff' }}>
       <Flex
@@ -69,7 +71,7 @@ export default function HeroSection() {
           <Flex gap={12} style={{ marginBottom: 56 }}>
             <Button
               type="primary"
-              onClick={() => navigate('/signup')}
+              onClick={() => scrollToId('service')}
               style={{
                 background: BRAND.colors.primary,
                 borderColor: BRAND.colors.primary,
@@ -80,9 +82,10 @@ export default function HeroSection() {
                 borderRadius: 8,
               }}
             >
-              무료로 진단받기
+              기능 둘러보기
             </Button>
             <Button
+              onClick={() => scrollToId('preview')}
               style={{
                 background: '#fff',
                 fontWeight: BRAND.fontWeight.semibold,
@@ -92,7 +95,7 @@ export default function HeroSection() {
                 borderRadius: 8,
               }}
             >
-              데모 보기
+              결과 미리보기
             </Button>
           </Flex>
 
@@ -124,22 +127,19 @@ export default function HeroSection() {
           </Flex>
         </div>
 
-        <div
+        <img
+          src={resultImage}
+          alt="진단 결과 미리보기"
           style={{
             flex: 1,
+            minWidth: 0,
+            width: '100%',
             aspectRatio: '4 / 3',
-            background: '#f0f2f5',
+            objectFit: 'contain',
             borderRadius: 16,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#999',
-            fontSize: BRAND.fontSize.subtitle,
-            fontWeight: BRAND.fontWeight.semibold,
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.08)',
           }}
-        >
-          [이미지 자리]
-        </div>
+        />
       </Flex>
     </section>
   );

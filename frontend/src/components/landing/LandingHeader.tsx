@@ -8,10 +8,47 @@ const { Header } = Layout;
 const { Text } = Typography;
 
 const menuItems = [
-  { key: 'service', label: '서비스 소개' },
-  { key: 'metrics', label: '진단 항목' },
-  { key: 'guide', label: '사용 가이드' },
-  { key: 'cases', label: '고객 사례' },
+  {
+    key: 'platform',
+    label: 'Platform',
+    children: [
+      { key: 'service', label: '목적 인식 진단' },
+      { key: 'metrics', label: '8개 측정 지표' },
+      { key: 'preview', label: '진단 결과 미리보기' },
+      { key: 'ai', label: 'AI 활용 방식' },
+      { key: 'pipeline', label: '시스템 구조' },
+    ],
+  },
+  {
+    key: 'solutions',
+    label: 'Solutions',
+    children: [
+      { key: 'usecases', label: '활용 분야' },
+      { key: 'datatypes', label: '지원 데이터' },
+      { key: 'pollution', label: '데이터 오염 자동 감지' },
+      { key: 'beforeafter', label: '개선 전/후 비교' },
+    ],
+  },
+  {
+    key: 'research',
+    label: 'Research',
+    children: [
+      { key: 'validation', label: '검증된 진단 정확도' },
+      { key: 'partners', label: '국제 표준 기반' },
+      { key: 'rag', label: '검색 기반 답변' },
+      { key: 'researchbacked', label: '근거 기반 점수' },
+    ],
+  },
+  {
+    key: 'company',
+    label: 'Company',
+    children: [
+      { key: 'cases', label: '고객 사례' },
+      { key: 'faq', label: '자주 묻는 질문' },
+      { key: 'guide', label: '사용 가이드' },
+      { key: 'cta', label: '문의·시작하기' },
+    ],
+  },
 ];
 
 export default function LandingHeader() {
