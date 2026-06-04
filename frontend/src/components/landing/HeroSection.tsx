@@ -23,34 +23,39 @@ export default function HeroSection() {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
             style={{
-              display: 'inline-block',
-              padding: '6px 14px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '8px 16px',
               borderRadius: 999,
               background: '#E8F1FB',
               color: BRAND.colors.primary,
               fontSize: BRAND.fontSize.bodySmall,
-              fontWeight: BRAND.fontWeight.semibold,
-              marginBottom: 24,
+              fontWeight: BRAND.fontWeight.bold,
+              letterSpacing: 0.2,
+              marginBottom: 28,
             }}
           >
-            {BRAND.tagline}
+            <span style={{ fontSize: 14 }}>🔬</span>
+            435회 ML 실험 검증 · ISO/IEC 25012 기반
           </div>
 
           <h1
             style={{
-              fontSize: BRAND.fontSize.titleLarge,
-              fontWeight: BRAND.fontWeight.semibold,
-              color: '#111',
-              lineHeight: 1.35,
+              fontSize: BRAND.fontSize.titleHero,
+              fontWeight: BRAND.fontWeight.black,
+              color: '#0A1828',
+              lineHeight: 1.1,
+              letterSpacing: -1,
               margin: 0,
-              marginBottom: 20,
+              marginBottom: 24,
             }}
           >
             데이터의{' '}
             <span style={{ color: BRAND.colors.primary }}>"목적"</span>
-            에 따라
+            에
             <br />
-            기준이 달라집니다
+            따라 기준이 달라집니다
           </h1>
 
           <p
@@ -104,10 +109,11 @@ export default function HeroSection() {
               <div key={s.label}>
                 <div
                   style={{
-                    fontSize: BRAND.fontSize.titleSmall,
-                    fontWeight: BRAND.fontWeight.semibold,
+                    fontSize: BRAND.fontSize.displayNumber,
+                    fontWeight: BRAND.fontWeight.bold,
                     color: BRAND.colors.primaryDark,
-                    lineHeight: 1.2,
+                    lineHeight: 1.1,
+                    letterSpacing: -0.5,
                   }}
                 >
                   {s.highlight}
@@ -117,7 +123,7 @@ export default function HeroSection() {
                     fontSize: BRAND.fontSize.bodySmall,
                     fontWeight: BRAND.fontWeight.regular,
                     color: '#666',
-                    marginTop: 6,
+                    marginTop: 8,
                   }}
                 >
                   {s.label}

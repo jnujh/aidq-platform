@@ -25,9 +25,13 @@ export const BRAND = {
     titleSmall: 22,
     titleMedium: 28,
     titleLarge: 30,
+    titleHero: 64,
+    displayNumber: 40,
   },
   fontWeight: {
     regular: 400,
     semibold: 600,
+    bold: 700,
+    black: 800,
   },
 } as const;
