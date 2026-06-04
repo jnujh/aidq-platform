@@ -209,6 +209,7 @@ public class JobService {
                 job.getJobName(),
                 job.getOriginalFilename(),
                 job.getDataType() != null ? job.getDataType().name() : null,
+                job.getModality(),
                 job.getStatus().name(),
                 job.getCreatedAt(),
                 job.getUpdatedAt(),

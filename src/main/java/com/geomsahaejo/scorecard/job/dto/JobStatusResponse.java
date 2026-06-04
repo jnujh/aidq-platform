@@ -8,6 +8,8 @@ public record JobStatusResponse(
         String jobName,
         String originalFilename,
         String dataType,
+        // 진단 모달리티: 'image' | 'text' | 'tabular'. null이면 정형(tabular). 화면 라벨용.
+        String modality,
         String status,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
