@@ -188,9 +188,7 @@ export default function UploadPage() {
 
       <div style={{ marginTop: 16, textAlign: 'center' }}>
         <Text type="secondary">
-          {dataType === 'tabular'
-            ? '사용 목적을 입력하면 LLM이 맞춤 평가지표 가중치를 추천합니다.'
-            : '비정형 데이터는 기본 가중치로 진단합니다. (사용 목적은 리포트에 반영)'}
+          사용 목적을 입력하면 데이터 유형(정형·이미지·텍스트)에 맞는 평가지표 가중치를 추천합니다. (비워두면 기본 가중치로 진단)
         </Text>
       </div>
     </div>
