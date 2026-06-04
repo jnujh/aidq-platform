@@ -94,6 +94,12 @@ services:
       dockerfile: Dockerfile
     ports:
       - "80:80"
+      - "443:443"
+    volumes:
+      # Let's Encrypt 인증서(호스트 발급분)를 읽기전용 마운트 → CI/CD 재배포해도 유지
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      # certbot webroot(자동 갱신 챌린지용)
+      - /home/ec2-user/certbot-webroot:/var/www/certbot:ro
     depends_on:
       - backend
     restart: always
