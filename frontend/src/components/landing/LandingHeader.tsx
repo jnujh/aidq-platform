@@ -12,10 +12,9 @@ const menuItems = [
     key: 'platform',
     label: 'Platform',
     children: [
-      { key: 'service', label: '목적 인식 진단' },
-      { key: 'metrics', label: '8개 측정 지표' },
+      { key: 'service', label: 'AI 진단 가이드' },
+      { key: 'metrics', label: '측정 지표' },
       { key: 'preview', label: '진단 결과 미리보기' },
-      { key: 'ai', label: 'AI 활용 방식' },
       { key: 'pipeline', label: '시스템 구조' },
     ],
   },
@@ -24,7 +23,6 @@ const menuItems = [
     label: 'Solutions',
     children: [
       { key: 'usecases', label: '활용 분야' },
-      { key: 'datatypes', label: '지원 데이터' },
       { key: 'pollution', label: '데이터 오염 자동 감지' },
       { key: 'beforeafter', label: '개선 전/후 비교' },
     ],
@@ -34,22 +32,38 @@ const menuItems = [
     label: 'Research',
     children: [
       { key: 'validation', label: '검증된 진단 정확도' },
-      { key: 'partners', label: '국제 표준 기반' },
       { key: 'rag', label: '검색 기반 답변' },
-      { key: 'researchbacked', label: '근거 기반 점수' },
     ],
   },
   {
     key: 'company',
     label: 'Company',
     children: [
-      { key: 'cases', label: '고객 사례' },
+      { key: 'team', label: '팀 멤버' },
       { key: 'faq', label: '자주 묻는 질문' },
-      { key: 'guide', label: '사용 가이드' },
-      { key: 'cta', label: '문의·시작하기' },
     ],
   },
 ];
+
+const ROUTE_FOR_KEY: Record<string, string> = {
+  // Platform 하위
+  service: '/platform/service',
+  metrics: '/platform/metrics',
+  preview: '/platform/preview',
+  pipeline: '/platform/pipeline',
+  // Solutions 하위
+  usecases: '/solutions/usecases',
+  datatypes: '/solutions/datatypes',
+  pollution: '/solutions/pollution',
+  beforeafter: '/solutions/beforeafter',
+  // Research 하위
+  validation: '/research/validation',
+  rag: '/research/rag',
+  ai: '/research/ai',
+  // Company 하위
+  team: '/company/team',
+  faq: '/company/faq',
+};
 
 export default function LandingHeader() {
   const navigate = useNavigate();
@@ -63,9 +77,8 @@ export default function LandingHeader() {
   };
 
   const handleMenuClick = ({ key }: { key: string }) => {
-    document
-      .getElementById(key)
-      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const route = ROUTE_FOR_KEY[key];
+    if (route) navigate(route);
   };
 
   return (
@@ -91,7 +104,14 @@ export default function LandingHeader() {
         <Flex
           align="center"
           gap={10}
-          onClick={() => navigate('/')}
+          onClick={() => {
+            if (window.location.pathname === '/') {
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+              navigate('/');
+              window.scrollTo({ top: 0 });
+            }
+          }}
           style={{ cursor: 'pointer' }}
         >
           <div

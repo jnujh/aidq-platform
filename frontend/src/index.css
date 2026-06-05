@@ -4,6 +4,12 @@
   box-sizing: border-box;
 }
 
+/* 한글 텍스트 줄바꿈: 어절 단위로만 끊기 (단어 중간 끊김 방지) */
+body {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
 /* Markdown 콘텐츠 스타일 */
 .markdown-content table {
   width: 100%;

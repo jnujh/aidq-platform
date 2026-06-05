@@ -16,6 +16,19 @@ export const BRAND = {
       success: { bg: '#E1F5EE', text: '#0F5C3E', icon: '#1F9D6B' },
       warning: { bg: '#FAEEDA', text: '#633806', icon: '#BA7517', border: '#F0D89A' },
     },
+    // B2B SaaS 절제 톤 (dqlabs / ataccama 참고) — 단일 액센트
+    neutral: {
+      page:     '#FFFFFF', // 메인 배경
+      surface:  '#F8F9FB', // 섹션 alt 배경
+      cardBg:   '#FFFFFF', // 카드 배경
+      border:   '#E5E7EB', // 카드 보더
+      borderSoft: '#EEF0F3',
+      divider:  '#F1F3F5',
+    },
+    // 카드별 색 구분 X — 모두 동일한 cool grey + 단일 액센트(네이비)
+    ink:      '#1A1F2E', // 거의 검정 + 살짝 네이비 (헤더·강조)
+    inkMuted: '#5C6478', // 본문 보조 텍스트
+    inkSoft:  '#8A91A0', // 캡션·라벨
   },
   fontSize: {
     bodySmall: 14,
@@ -25,9 +38,13 @@ export const BRAND = {
     titleSmall: 22,
     titleMedium: 28,
     titleLarge: 30,
+    titleHero: 64,
+    displayNumber: 40,
   },
   fontWeight: {
     regular: 400,
     semibold: 600,
+    bold: 700,
+    black: 800,
   },
 } as const;
