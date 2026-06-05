@@ -322,7 +322,7 @@ export default function RagSearchSection() {
         </Flex>
 
         {/* ── 1. RAG 파이프라인 4단계 ── */}
-        <div style={{ marginTop: 72 }}>
+        <div style={{ marginTop: 96 }}>
           <div style={{ marginBottom: 24 }}>
             <div
               style={{
@@ -408,7 +408,7 @@ export default function RagSearchSection() {
         </div>
 
         {/* ── 2. 인덱싱된 문서 통계 ── */}
-        <div style={{ marginTop: 72 }}>
+        <div style={{ marginTop: 96 }}>
           <div style={{ marginBottom: 24 }}>
             <div
               style={{
@@ -572,7 +572,7 @@ export default function RagSearchSection() {
         </div>
 
         {/* ── 3. 실제 인용 예시 (개선가이드리얼2.png) ── */}
-        <div style={{ marginTop: 72 }}>
+        <div style={{ marginTop: 96 }}>
           <div style={{ marginBottom: 24 }}>
             <div
               style={{
@@ -621,18 +621,54 @@ export default function RagSearchSection() {
                 padding: 14,
                 display: 'flex',
                 justifyContent: 'center',
+                position: 'relative',
               }}
             >
-              <img
-                src={citationImg}
-                alt="실제 LLM 답변에 박힌 Kaggle 참고 자료"
-                style={{
-                  maxWidth: '100%',
-                  height: 'auto',
-                  display: 'block',
-                  borderRadius: 8,
-                }}
-              />
+              <div style={{ position: 'relative', width: '100%' }}>
+                <img
+                  src={citationImg}
+                  alt="실제 LLM 답변에 박힌 Kaggle 참고 자료"
+                  style={{
+                    width: '100%',
+                    height: 'auto',
+                    display: 'block',
+                    borderRadius: 8,
+                  }}
+                />
+                {/* 참고 자료 영역 강조 (이미지 하단 ~18%) */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: '3%',
+                    right: '3%',
+                    bottom: '3%',
+                    height: '17%',
+                    border: '3px solid #D9396A',
+                    borderRadius: 6,
+                    boxShadow: '0 0 0 4px rgba(217, 57, 106, 0.15)',
+                    pointerEvents: 'none',
+                  }}
+                />
+                {/* 화살표/라벨 — 빨간 박스 옆에 "참고 자료" 표시 */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    right: -8,
+                    bottom: '5%',
+                    transform: 'translateX(100%)',
+                    background: '#D9396A',
+                    color: '#fff',
+                    fontSize: 10,
+                    fontWeight: BRAND.fontWeight.bold,
+                    letterSpacing: 0.5,
+                    padding: '4px 8px',
+                    borderRadius: 4,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  참고 자료
+                </div>
+              </div>
             </div>
             <div
               style={{
@@ -714,11 +750,12 @@ export default function RagSearchSection() {
                 </Flex>
               </div>
 
-              {/* 🔗 참고 자료 */}
+              {/* 🔗 참고 자료 — 빨간 박스로 강조 (좌측 이미지 강조와 매칭) */}
               <div
                 style={{
-                  background: BRAND.colors.highlights.success.bg,
-                  borderLeft: `4px solid ${BRAND.colors.highlights.success.icon}`,
+                  background: '#FFF5F8',
+                  border: '2px solid #D9396A',
+                  boxShadow: '0 0 0 4px rgba(217, 57, 106, 0.12)',
                   padding: '16px 18px',
                   borderRadius: 10,
                 }}
@@ -726,7 +763,7 @@ export default function RagSearchSection() {
                 <div
                   style={{
                     fontSize: 11,
-                    color: BRAND.colors.highlights.success.text,
+                    color: '#D9396A',
                     fontWeight: BRAND.fontWeight.bold,
                     letterSpacing: 0.4,
                     marginBottom: 8,
@@ -739,7 +776,7 @@ export default function RagSearchSection() {
                     margin: 0,
                     paddingLeft: 18,
                     fontSize: 12,
-                    color: BRAND.colors.highlights.success.text,
+                    color: '#7A1E3A',
                     lineHeight: 2,
                   }}
                 >
@@ -809,7 +846,7 @@ export default function RagSearchSection() {
         </div>
 
         {/* ── 4. 인용 규칙 (안전장치) ── */}
-        <div style={{ marginTop: 72 }}>
+        <div style={{ marginTop: 96 }}>
           <div style={{ marginBottom: 24 }}>
             <div
               style={{

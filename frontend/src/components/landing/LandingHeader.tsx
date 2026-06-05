@@ -108,7 +108,14 @@ export default function LandingHeader() {
         <Flex
           align="center"
           gap={10}
-          onClick={() => navigate('/')}
+          onClick={() => {
+            if (window.location.pathname === '/') {
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+              navigate('/');
+              window.scrollTo({ top: 0 });
+            }
+          }}
           style={{ cursor: 'pointer' }}
         >
           <div

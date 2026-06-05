@@ -11,11 +11,7 @@ export default function SectionFrame({
     <div
       id={id}
       style={{
-        minHeight: 'calc(100vh - 72px)',
         scrollMarginTop: 80,
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
       }}
     >
       {children}

@@ -807,7 +807,7 @@ export default function MetricsSection() {
         </div>
 
         {/* ── 학술·표준 근거 ── */}
-        <div style={{ marginTop: 56 }}>
+        <div style={{ marginTop: 88 }}>
           <div style={{ textAlign: 'center', marginBottom: 28 }}>
             <div
               style={{
