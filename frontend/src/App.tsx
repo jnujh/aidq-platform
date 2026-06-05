@@ -26,6 +26,7 @@ import CellMatrixSection from './components/landing/CellMatrixSection';
 import MetricsSection from './components/landing/MetricsSection';
 import ResultPreviewSection from './components/landing/ResultPreviewSection';
 import HowItWorksSection from './components/landing/HowItWorksSection';
+import JobsListPreviewSection from './components/landing/JobsListPreviewSection';
 import PipelineSection from './components/landing/PipelineSection';
 import UseCasesSection from './components/landing/UseCasesSection';
 import PurposeUseCasesSection from './components/landing/PurposeUseCasesSection';
@@ -125,6 +126,7 @@ const STANDALONE_PAGES: Record<string, StandalonePageEntry> = {
     content: (
       <>
         <HowItWorksSection />
+        <JobsListPreviewSection />
         <PurposeComparisonSection />
         <AnomalyDetectionSection />
         <LLMWeightSection />
