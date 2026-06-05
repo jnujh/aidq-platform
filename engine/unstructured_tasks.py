@@ -96,12 +96,17 @@ def run_image_diagnosis(message):
         entries, class_names = image_index(s3, s3_key)
         total = len(entries)
         batches = _chunk(entries, IMG_BATCH)
+        # 임베딩(B형 지표용)은 전수 추출하지 않고 배치당 cap만 → 전체 최대 _IMG_EMBED_CAP장(그 이하).
+        # per-item A형 통계·라벨은 전수 유지되므로 groupBreakdown엔 영향 없음.
+        n_batches = max(1, len(batches))
+        embed_cap = max(1, (seam._IMG_EMBED_CAP + n_batches - 1) // n_batches)
         print(f'[이미지 Coordinator] jobId={job_id}, {total}장, 클래스 {len(class_names)}개, '
-              f'{len(batches)}배치 → chord')
+              f'{len(batches)}배치, 배치당 임베딩 cap={embed_cap} → chord')
         callback = aggregate_unstructured.s(job_id, 'image', weights, class_names,
                                             total, 'classification') \
             .on_error(on_unstructured_error.s(job_id=job_id))
-        chord(group(process_image_batch.s(s3_key, b, USE_EMBEDDINGS) for b in batches))(callback)
+        chord(group(process_image_batch.s(s3_key, b, USE_EMBEDDINGS, embed_cap)
+                    for b in batches))(callback)
     except Exception as e:
         print(f'  [이미지 Coordinator 실패] {e}')
         _publish_error(job_id, e)
@@ -149,14 +154,14 @@ def run_text_diagnosis(message):
 # =====================================================================
 
 @app.task(bind=True, name='tasks.process_image_batch')
-def process_image_batch(self, s3_key, entries, use_embeddings):
+def process_image_batch(self, s3_key, entries, use_embeddings, embed_cap=None):
     """이미지 배치: ZIP에서 자기 엔트리만 디코딩 + per-item/임베딩. 예외→sentinel."""
     try:
         s3 = get_s3_client()
         images, labels = decode_image_entries(s3, s3_key, entries)
         if not images:
             return {'_error': f'{s3_key} 배치 디코딩 0건'}
-        return seam.image_map(images, labels, use_embeddings=use_embeddings)
+        return seam.image_map(images, labels, use_embeddings=use_embeddings, embed_cap=embed_cap)
     except SoftTimeLimitExceeded as e:
         return {'_error': f'이미지 배치 시간초과: {e}'}
     except Exception as e:

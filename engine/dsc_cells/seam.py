@@ -149,8 +149,22 @@ def _group_breakdown(labels, per_item_metrics, special_metrics, class_names=None
 # IMAGE
 # =====================================================================
 
-def image_map(images, labels, use_embeddings=True):
-    """워커 1개 배치 → per-item 통계 + (선택)임베딩. JSON-safe dict 반환."""
+def _embed_subset_indices(n, cap):
+    """임베딩을 뽑을 인덱스(결정적, 균등 간격). cap이 None/n이상이면 전체.
+
+    per-item A형 통계는 전 이미지에 대해 계산하고, 비싼 ResNet 임베딩만 이 subset에 대해 추출한다
+    (임베딩 기반 B형 지표는 표본 추정이라 cap 표본이면 충분). groupBreakdown(A형)엔 영향 없음.
+    """
+    if not cap or cap >= n:
+        return list(range(n))
+    return sorted(set(int(i) for i in np.linspace(0, n - 1, cap)))
+
+
+def image_map(images, labels, use_embeddings=True, embed_cap=None):
+    """워커 1개 배치 → per-item 통계 + (선택)임베딩. JSON-safe dict 반환.
+
+    embed_cap: 이 배치에서 임베딩을 추출할 최대 이미지 수(결정적 subset). None이면 전체.
+    """
     mask_ratios, size_keys, mean_intensities = [], [], []
     valids, sample_qualities, hashes = [], [], []
 
@@ -196,10 +210,15 @@ def image_map(images, labels, use_embeddings=True):
         'hashes': hashes,
         'labels': [int(x) for x in np.asarray(labels).reshape(-1).tolist()],
         'feats': [],
+        'feat_labels': [],
     }
     if use_embeddings and len(images) > 0:
-        feats, _ = _img._extract_features(images, sample_cap=None)
+        idx = _embed_subset_indices(len(images), embed_cap)
+        sub_imgs = [images[i] for i in idx]
+        lab_arr = np.asarray(labels).reshape(-1)
+        feats, _ = _img._extract_features(sub_imgs, sample_cap=None)
         partial['feats'] = feats.astype(float).tolist()
+        partial['feat_labels'] = [int(lab_arr[i]) for i in idx]
     return partial
 
 
@@ -210,7 +229,7 @@ def image_reduce(partials, weights=None, use_embeddings=True, random_state=1, cl
     """
     w = weights or _img.DEFAULT_WEIGHTS_IMAGE
     mask_ratios, size_keys, mean_intensities = [], [], []
-    valids, sample_qualities, hashes, labels, feats = [], [], [], [], []
+    valids, sample_qualities, hashes, labels, feats, feat_labels = [], [], [], [], [], []
     for p in partials:
         mask_ratios += p['mask_ratios']
         size_keys += p['size_keys']
@@ -220,6 +239,9 @@ def image_reduce(partials, weights=None, use_embeddings=True, random_state=1, cl
         hashes += p['hashes']
         labels += p['labels']
         feats += p['feats']
+        # 임베딩은 표본(feat subset)만 추출 → 임베딩 지표는 feat과 정렬된 feat_labels 사용.
+        # (구버전 partial은 feat_labels 없음 → 그땐 feats=전수라 labels와 정렬됨)
+        feat_labels += p.get('feat_labels') if p.get('feat_labels') is not None else p['labels']
 
     n = len(labels)
     metrics = {
@@ -232,7 +254,7 @@ def image_reduce(partials, weights=None, use_embeddings=True, random_state=1, cl
         'sample_quality_image': float(np.mean(sample_qualities)) if sample_qualities else 1.0,
     }
     if use_embeddings and n >= 10 and len(feats) > 0:
-        f, y = _subsample_feats(feats, labels, _IMG_EMBED_CAP, random_state)
+        f, y = _subsample_feats(feats, feat_labels, _IMG_EMBED_CAP, random_state)
         metrics['feature_correlation'] = _img._calc_feature_correlation_from_feats(f)
         metrics['label_consistency'] = (
             _img._calc_label_consistency_from_feats(f, y, k=5) if len(f) >= 6 else 1.0)
