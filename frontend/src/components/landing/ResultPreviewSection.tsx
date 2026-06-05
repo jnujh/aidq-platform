@@ -5,9 +5,9 @@ import reasonImg from '../../assets/남독일신용도이민평가이유.png';
 import weightImg from '../../assets/가중치분석.png';
 import scoreImg from '../../assets/남독일진단결과.png';
 import metricImg from '../../assets/남독일지표분석.png';
-import guide1Img from '../../assets/남독일개선가이드1.png';
-import guide2Img from '../../assets/남독일개선가이드2.png';
-import guide3Img from '../../assets/남독일개선가이드3.png';
+import guide1Img from '../../assets/개선가이드리얼.png';
+import guide2Img from '../../assets/개선가이드리얼2.png';
+import guide3Img from '../../assets/개선가이드리얼3.png';
 import retryImg from '../../assets/독일신용도재진단.png';
 import retryResultImg from '../../assets/재진단결과.png';
 
