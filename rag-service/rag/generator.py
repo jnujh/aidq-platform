@@ -329,7 +329,11 @@ def _format_sources(search_results: list[dict]) -> str:
         if not src or src in seen:
             continue
         seen.add(src)
-        names.append(_SOURCE_DISPLAY_NAMES.get(src, src))
+        # 매핑된 사람이 읽는 이름만 노출. 미매핑이면 내부 파일명(예: 18_sentiment_analysis)을
+        # 그대로 보이느니 생략한다 — '문서 3' 같은 내부 식별자 노출 금지 취지와 일치.
+        display = _SOURCE_DISPLAY_NAMES.get(src)
+        if display:
+            names.append(display)
     if not names:
         return ""
     lines = "\n".join(f"- {n}" for n in names)
