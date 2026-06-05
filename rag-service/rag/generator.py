@@ -316,6 +316,26 @@ def _build_context(search_results: list[dict]) -> str:
     return "\n\n---\n\n".join(context_parts)
 
 
+def _format_sources(search_results: list[dict]) -> str:
+    """검색에 실제 쓰인 출처를 결정적 '참고 출처' 마크다운 섹션으로 변환.
+
+    LLM이 생성하는 게 아니라 검색 메타데이터에서만 구성(환각 0). 등장 순서로 dedup하고
+    사람이 읽는 이름(_SOURCE_DISPLAY_NAMES)으로 표기한다. 내부 번호('문서 3')는 쓰지 않는다.
+    출처가 없으면 빈 문자열을 반환해 섹션을 생략한다.
+    """
+    seen, names = set(), []
+    for result in search_results or []:
+        src = (result.get("metadata") or {}).get("source_file")
+        if not src or src in seen:
+            continue
+        seen.add(src)
+        names.append(_SOURCE_DISPLAY_NAMES.get(src, src))
+    if not names:
+        return ""
+    lines = "\n".join(f"- {n}" for n in names)
+    return f"\n\n---\n\n### 📚 참고 출처\n{lines}"
+
+
 def _salvage_weights(text: str, keys: list[str]) -> dict:
     """JSON이 잘려 파싱 실패해도 weights 정수만 정규식으로 복구 (weights는 JSON 앞부분이라 보통 온전).
     모든 기대 지표가 잡힐 때만 반환(부분이면 무효)."""
@@ -421,7 +441,8 @@ def generate_weights(purpose: str, search_results: list[dict],
         reasoning = re.sub(r'={2,}\s*REASONING\s*={2,}', '', rest, flags=re.IGNORECASE).strip()
     if not reasoning:
         reasoning = "(근거 설명이 생성되지 않았습니다.)"
-    return {"weights": _normalize_to_ratio(weights), "reasoning": reasoning}
+    return {"weights": _normalize_to_ratio(weights),
+            "reasoning": reasoning + _format_sources(search_results)}
 
 
 def generate_report(diagnosis_result: dict, purpose: str, search_results: list[dict]) -> str:
@@ -448,4 +469,4 @@ def generate_report(diagnosis_result: dict, purpose: str, search_results: list[d
         messages=[{"role": "user", "content": prompt}],
     )
 
-    return response.content[0].text.strip()
+    return response.content[0].text.strip() + _format_sources(search_results)
