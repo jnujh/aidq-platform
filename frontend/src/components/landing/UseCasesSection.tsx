@@ -11,6 +11,12 @@ import {
   IconAlertCircle,
 } from '@tabler/icons-react';
 import { BRAND } from '../../config/brand';
+import financeImg from '../../assets/금융.png';
+import medicalImg from '../../assets/의료.png';
+import factoryImg from '../../assets/제조.png';
+import recommendImg from '../../assets/추천.png';
+import publicDataImg from '../../assets/공공데이터.png';
+import academicImg from '../../assets/졸업.png';
 
 type Vertical = {
   Icon: typeof IconBrain;
@@ -19,7 +25,8 @@ type Vertical = {
   scenario: string;
   problem: string;
   impact: string;
-  color: string;
+  img: string;
+  imgFit?: 'cover' | 'contain';
 };
 
 const VERTICALS: Vertical[] = [
@@ -30,7 +37,7 @@ const VERTICALS: Vertical[] = [
     scenario: '신용도 분류, 카드 사기 탐지, 대출 부도 예측 모델 학습용 데이터',
     problem: '사기 클래스 비율 0.1~3%로 극단적 불균형, 카테고리 표기 불일치',
     impact: 'minority class 보존을 자동 강조, 클래스 불균형 가중치 ↑',
-    color: '#185FA5',
+    img: financeImg,
   },
   {
     Icon: IconHeartbeat,
@@ -39,7 +46,7 @@ const VERTICALS: Vertical[] = [
     scenario: 'EMR 기반 진단 보조, 약물 처방 분류, 의료영상 라벨링',
     problem: '체계적 결측(MNAR), 라벨러 간 일관성 차이, 희귀 케이스 라벨 오류',
     impact: 'cleanlab 기반 라벨 오류 탐지, MNAR 패턴 경고',
-    color: '#D9396A',
+    img: medicalImg,
   },
   {
     Icon: IconBuildingFactory2,
@@ -48,7 +55,7 @@ const VERTICALS: Vertical[] = [
     scenario: '센서 시계열 기반 불량 예측, 공정 파라미터 최적화 모델',
     problem: '센서 노이즈로 인한 이상치, 정상 변동과 진짜 이상 신호 구분 어려움',
     impact: '이상치 비율 진단 + 모델 타입별 영향도 가이드',
-    color: '#5382A1',
+    img: factoryImg,
   },
   {
     Icon: IconShoppingCart,
@@ -57,7 +64,8 @@ const VERTICALS: Vertical[] = [
     scenario: '고객 이탈 예측, CTR 예측, 상품 추천, 세그멘테이션',
     problem: '동일 고객 중복 행, 카테고리 폭증, 학습-운영 분포 차이(drift)',
     impact: '중복 데이터 누수 감지, 카디널리티 폭증 경고',
-    color: '#FF8A3D',
+    img: recommendImg,
+    imgFit: 'contain',
   },
   {
     Icon: IconBuildingBank,
@@ -66,7 +74,7 @@ const VERTICALS: Vertical[] = [
     scenario: '공공데이터포털 개방 전 검증, 정책 효과 분석 데이터셋',
     problem: '표준 표기 미준수, 결측 표시 다양(NA·null·-1·999), 시간 형식 혼재',
     impact: 'ISO/IEC 25012·5259 기반 표준 적합성 진단',
-    color: '#7A5AF8',
+    img: publicDataImg,
   },
   {
     Icon: IconSchool,
@@ -75,7 +83,7 @@ const VERTICALS: Vertical[] = [
     scenario: '캡스톤 데이터셋 사전 점검, 논문 실험 재현성 확보',
     problem: '학습 단계의 데이터 누수, 클래스 균형 미확인, 라벨 일관성 검증 없음',
     impact: '학습 전 8개 지표 자동 점검, 개선 우선순위 자동 제안',
-    color: '#1F9D6B',
+    img: academicImg,
   },
 ];
 
@@ -154,7 +162,7 @@ export default function UseCasesSection() {
 
         {/* 산업 vertical 6장 */}
         <Flex gap={20} wrap="wrap" align="stretch" style={{ marginBottom: 56 }}>
-          {VERTICALS.map(({ Icon, category, title, scenario, problem, impact, color }) => (
+          {VERTICALS.map(({ Icon, category, title, scenario, problem, impact, img, imgFit }) => (
             <div
               key={category}
               style={{
@@ -163,139 +171,157 @@ export default function UseCasesSection() {
                 background: '#fff',
                 border: '1px solid #E8EEF5',
                 borderRadius: 18,
-                padding: 24,
+                overflow: 'hidden',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 14,
-                position: 'relative',
-                overflow: 'hidden',
               }}
             >
-              {/* 컬러 액센트 바 */}
+              {/* 이미지 배너 */}
               <div
                 style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: 4,
-                  height: '100%',
-                  background: color,
+                  width: '100%',
+                  height: 160,
+                  overflow: 'hidden',
+                  background: BRAND.colors.surfaces.subtle,
+                  position: 'relative',
                 }}
-              />
-              <Flex align="center" gap={12}>
-                <div
+              >
+                <img
+                  src={img}
+                  alt={category}
                   style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 12,
-                    background: `${color}1A`,
-                    color,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flex: '0 0 auto',
+                    width: '100%',
+                    height: '100%',
+                    objectFit: imgFit ?? 'cover',
+                    display: 'block',
                   }}
-                >
-                  <Icon size={24} stroke={1.8} />
-                </div>
+                />
+              </div>
+
+              <div
+                style={{
+                  padding: 22,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 14,
+                  flex: 1,
+                }}
+              >
+                <Flex align="center" gap={12}>
+                  <div
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 10,
+                      background: BRAND.colors.surfaces.cardBlue,
+                      color: BRAND.colors.primary,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flex: '0 0 auto',
+                    }}
+                  >
+                    <Icon size={22} stroke={1.8} />
+                  </div>
+                  <div>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: BRAND.colors.primary,
+                        fontWeight: BRAND.fontWeight.bold,
+                        letterSpacing: 0.4,
+                        marginBottom: 2,
+                      }}
+                    >
+                      {category}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: BRAND.fontSize.subtitleSmall,
+                        fontWeight: BRAND.fontWeight.bold,
+                        color: BRAND.colors.primaryDark,
+                        lineHeight: 1.3,
+                      }}
+                    >
+                      {title}
+                    </div>
+                  </div>
+                </Flex>
+
                 <div>
                   <div
                     style={{
                       fontSize: 11,
-                      color,
-                      fontWeight: BRAND.fontWeight.bold,
-                      letterSpacing: 0.4,
-                      marginBottom: 2,
+                      color: '#7A8FA5',
+                      fontWeight: BRAND.fontWeight.semibold,
+                      letterSpacing: 0.3,
+                      marginBottom: 4,
                     }}
                   >
-                    {category}
+                    쓰임새
                   </div>
                   <div
                     style={{
-                      fontSize: BRAND.fontSize.subtitleSmall,
-                      fontWeight: BRAND.fontWeight.bold,
-                      color: BRAND.colors.primaryDark,
-                      lineHeight: 1.3,
+                      fontSize: BRAND.fontSize.bodySmall,
+                      color: '#3F4A5C',
+                      lineHeight: 1.6,
                     }}
                   >
-                    {title}
+                    {scenario}
                   </div>
                 </div>
-              </Flex>
 
-              <div>
-                <div
-                  style={{
-                    fontSize: 11,
-                    color: '#7A8FA5',
-                    fontWeight: BRAND.fontWeight.semibold,
-                    letterSpacing: 0.3,
-                    marginBottom: 4,
-                  }}
-                >
-                  쓰임새
+                <div>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: '#7A8FA5',
+                      fontWeight: BRAND.fontWeight.semibold,
+                      letterSpacing: 0.3,
+                      marginBottom: 4,
+                    }}
+                  >
+                    자주 발생하는 데이터 품질 문제
+                  </div>
+                  <div
+                    style={{
+                      fontSize: BRAND.fontSize.bodySmall,
+                      color: '#5A6678',
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    {problem}
+                  </div>
                 </div>
-                <div
-                  style={{
-                    fontSize: BRAND.fontSize.bodySmall,
-                    color: '#3F4A5C',
-                    lineHeight: 1.6,
-                  }}
-                >
-                  {scenario}
-                </div>
-              </div>
 
-              <div>
                 <div
                   style={{
-                    fontSize: 11,
-                    color: '#D9396A',
-                    fontWeight: BRAND.fontWeight.semibold,
-                    letterSpacing: 0.3,
-                    marginBottom: 4,
+                    marginTop: 'auto',
+                    paddingTop: 12,
+                    borderTop: '1px dashed #E8EEF5',
                   }}
                 >
-                  자주 발생하는 데이터 품질 문제
-                </div>
-                <div
-                  style={{
-                    fontSize: BRAND.fontSize.bodySmall,
-                    color: '#5A6678',
-                    lineHeight: 1.6,
-                  }}
-                >
-                  {problem}
-                </div>
-              </div>
-
-              <div
-                style={{
-                  marginTop: 'auto',
-                  paddingTop: 12,
-                  borderTop: '1px dashed #E8EEF5',
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 11,
-                    color: '#1F9D6B',
-                    fontWeight: BRAND.fontWeight.semibold,
-                    letterSpacing: 0.3,
-                    marginBottom: 4,
-                  }}
-                >
-                  플랫폼의 진단 효과
-                </div>
-                <div
-                  style={{
-                    fontSize: BRAND.fontSize.bodySmall,
-                    color: BRAND.colors.primaryDark,
-                    lineHeight: 1.6,
-                    fontWeight: BRAND.fontWeight.semibold,
-                  }}
-                >
-                  {impact}
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: BRAND.colors.primary,
+                      fontWeight: BRAND.fontWeight.semibold,
+                      letterSpacing: 0.3,
+                      marginBottom: 4,
+                    }}
+                  >
+                    플랫폼의 진단 효과
+                  </div>
+                  <div
+                    style={{
+                      fontSize: BRAND.fontSize.bodySmall,
+                      color: BRAND.colors.primaryDark,
+                      lineHeight: 1.6,
+                      fontWeight: BRAND.fontWeight.semibold,
+                    }}
+                  >
+                    {impact}
+                  </div>
                 </div>
               </div>
             </div>
@@ -371,27 +397,29 @@ export default function UseCasesSection() {
 
                 <div
                   style={{
-                    background: BRAND.colors.highlights.warning.bg,
-                    color: BRAND.colors.highlights.warning.text,
+                    background: BRAND.colors.surfaces.subtle,
+                    color: '#5A6678',
                     padding: '10px 12px',
                     borderRadius: 8,
                     fontSize: BRAND.fontSize.bodySmall,
                     lineHeight: 1.55,
+                    borderLeft: '3px solid #CBD3E0',
                   }}
                 >
-                  <span style={{ fontWeight: BRAND.fontWeight.bold }}>Before:</span> {before}
+                  <span style={{ fontWeight: BRAND.fontWeight.bold, color: '#3F4A5C' }}>Before:</span> {before}
                 </div>
                 <div
                   style={{
-                    background: BRAND.colors.highlights.success.bg,
-                    color: BRAND.colors.highlights.success.text,
+                    background: BRAND.colors.surfaces.cardBlue,
+                    color: BRAND.colors.primaryDark,
                     padding: '10px 12px',
                     borderRadius: 8,
                     fontSize: BRAND.fontSize.bodySmall,
                     lineHeight: 1.55,
+                    borderLeft: `3px solid ${BRAND.colors.primary}`,
                   }}
                 >
-                  <span style={{ fontWeight: BRAND.fontWeight.bold }}>After:</span> {after}
+                  <span style={{ fontWeight: BRAND.fontWeight.bold, color: BRAND.colors.primary }}>After:</span> {after}
                 </div>
 
                 <div
