@@ -90,7 +90,7 @@ export default function PurposeUseCasesSection() {
         alignItems: 'center',
       }}
     >
-      <div style={{ maxWidth: 1280, margin: '0 auto', width: '100%' }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto', width: '100%', wordBreak: 'keep-all' }}>
         <div style={{ textAlign: 'center', marginBottom: 48 }}>
           <div
             style={{

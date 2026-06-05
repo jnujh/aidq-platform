@@ -34,11 +34,9 @@ import SupportedDataSection from './components/landing/SupportedDataSection';
 import PollutionDetectionSection from './components/landing/PollutionDetectionSection';
 import BeforeAfterSection from './components/landing/BeforeAfterSection';
 import ValidationSection from './components/landing/ValidationSection';
-import ResearchBackedSection from './components/landing/ResearchBackedSection';
 import RagSearchSection from './components/landing/RagSearchSection';
-import TestimonialsSection from './components/landing/TestimonialsSection';
+import TeamSection from './components/landing/TeamSection';
 import FAQSection from './components/landing/FAQSection';
-import FinalCTASection from './components/landing/FinalCTASection';
 import { authStore } from './stores/authStore';
 
 const { Sider, Header, Content } = Layout;
@@ -162,12 +160,10 @@ const STANDALONE_PAGES: Record<string, StandalonePageEntry> = {
   '/solutions/beforeafter': { id: 'beforeafter', content: <BeforeAfterSection /> },
   // Research
   '/research/validation': { id: 'validation', content: <ValidationSection /> },
-  '/research/researchbacked': { id: 'researchbacked', content: <ResearchBackedSection /> },
   '/research/rag': { id: 'rag', content: <RagSearchSection /> },
   // Company
-  '/company/cases': { id: 'cases', content: <TestimonialsSection /> },
+  '/company/team': { id: 'team', content: <TeamSection /> },
   '/company/faq': { id: 'faq', content: <FAQSection /> },
-  '/company/cta': { id: 'cta', content: <FinalCTASection /> },
 };
 
 function StandalonePageLayout({ entry }: { entry: StandalonePageEntry }) {

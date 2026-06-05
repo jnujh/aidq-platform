@@ -70,6 +70,7 @@ export default function JobsListPreviewSection() {
             }}
           >
             업로드한 모든 진단을 한 리스트에서 — 데이터 유형, 상태, 생성일시까지 즉시 보입니다.
+            <br />
             완료된 작업은 클릭으로 결과·LLM 리포트로 바로 이동.
           </p>
         </div>

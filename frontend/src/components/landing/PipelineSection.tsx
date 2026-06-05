@@ -426,9 +426,9 @@ export default function PipelineSection() {
                 marginRight: 'auto',
               }}
             >
-              파일이 임계치(<strong style={{ color: BRAND.colors.primaryDark }}>32MB</strong>) 이상이면 자동으로 Celery chord 분산
-              파이프라인이 켜집니다. 청크 파일을 미리 만들지 않고, 각 워커가 S3에서 자기 구간만 직접
-              읽어 부분 지표를 계산한 뒤 합산합니다.
+              파일이 임계치(<strong style={{ color: BRAND.colors.primaryDark }}>32MB</strong>) 이상이면 자동으로 Celery chord 분산 파이프라인이 켜집니다.
+              <br />
+              청크 파일을 미리 만들지 않고, 각 워커가 S3에서 자기 구간만 직접 읽어 부분 지표를 계산한 뒤 합산합니다.
             </p>
           </div>
 

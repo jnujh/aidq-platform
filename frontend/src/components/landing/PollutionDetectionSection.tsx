@@ -163,6 +163,7 @@ export default function PollutionDetectionSection() {
             }}
           >
             DSC v3.2 엔진은 합성 오염 시나리오로 <strong style={{ color: BRAND.colors.primaryDark }}>3개 데이터셋 · 5개 ML 모델 · 4단계 강도</strong> 교차 검증을 거쳤습니다.
+            <br />
             아래는 진단 결과가 실제 모델 성능과 어떻게 연결되는지 정량적으로 보여주는 실험 요약입니다.
           </p>
         </div>

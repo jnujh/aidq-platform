@@ -32,7 +32,6 @@ const menuItems = [
     label: 'Research',
     children: [
       { key: 'validation', label: '검증된 진단 정확도' },
-      { key: 'researchbacked', label: '근거 기반 점수' },
       { key: 'rag', label: '검색 기반 답변' },
     ],
   },
@@ -40,9 +39,8 @@ const menuItems = [
     key: 'company',
     label: 'Company',
     children: [
-      { key: 'cases', label: '고객 사례' },
+      { key: 'team', label: '팀 멤버' },
       { key: 'faq', label: '자주 묻는 질문' },
-      { key: 'cta', label: '문의·시작하기' },
     ],
   },
 ];
@@ -60,13 +58,11 @@ const ROUTE_FOR_KEY: Record<string, string> = {
   beforeafter: '/solutions/beforeafter',
   // Research 하위
   validation: '/research/validation',
-  researchbacked: '/research/researchbacked',
   rag: '/research/rag',
   ai: '/research/ai',
   // Company 하위
-  cases: '/company/cases',
+  team: '/company/team',
   faq: '/company/faq',
-  cta: '/company/cta',
 };
 
 export default function LandingHeader() {

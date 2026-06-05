@@ -118,7 +118,7 @@ const IMPACT_EXAMPLES: ImpactExample[] = [
 export default function UseCasesSection() {
   return (
     <section style={{ padding: '80px 40px', background: '#fff' }}>
-      <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto', wordBreak: 'keep-all' }}>
         {/* 헤더 */}
         <div style={{ textAlign: 'center', marginBottom: 48 }}>
           <div
@@ -155,8 +155,8 @@ export default function UseCasesSection() {
             }}
           >
             모델 학습 전 데이터 품질 검증이 필요한 모든 도메인에서 활용할 수 있습니다.
-            분야마다 <strong style={{ color: BRAND.colors.primaryDark }}>치명적인 데이터 품질 문제</strong>가 다르고,
-            플랫폼은 사용 목적을 보고 그에 맞춰 가중치를 잡습니다.
+            <br />
+            분야마다 <strong style={{ color: BRAND.colors.primaryDark }}>치명적인 데이터 품질 문제</strong>가 다르고, 플랫폼은 사용 목적을 보고 그에 맞춰 가중치를 잡습니다.
           </p>
         </div>
 
