@@ -59,10 +59,15 @@ public class JwtUtil {
 
     // ── SSE 티켓 검증: scope=sse 가 아니면(전권 토큰 포함) 거부 ──
     public void validateSseTicket(String token) {
-        Object scope = getClaims(token).get("scope");
-        if (!SSE_SCOPE.equals(scope)) {
+        if (!isSseTicket(token)) {
             throw new CustomException(ErrorType.INVALID_TOKEN);
         }
+    }
+
+    // ── SSE 전용 티켓 여부(scope=sse). 일반 인증 필터에서 SSE 티켓을 거부하는 데 사용 ──
+    // (SSE 티켓이 일반 API 인증에도 통하면 노출 시 60초간 전권이 되어 scope 격리가 무의미해짐)
+    public boolean isSseTicket(String token) {
+        return SSE_SCOPE.equals(getClaims(token).get("scope"));
     }
 
     // ── userId 추출 ────────────────────────────────────────

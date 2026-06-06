@@ -2,6 +2,7 @@ package com.geomsahaejo.scorecard.global.config;
 
 import com.geomsahaejo.scorecard.global.exception.CustomException;
 import com.geomsahaejo.scorecard.global.exception.ErrorDetail;
+import com.geomsahaejo.scorecard.global.exception.ErrorType;
 import com.geomsahaejo.scorecard.global.response.ApiResponse;
 import com.geomsahaejo.scorecard.global.util.JwtUtil;
 import jakarta.servlet.FilterChain;
@@ -36,6 +37,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (StringUtils.hasText(token)) {
             try {
                 jwtUtil.validateToken(token);
+                // SSE 전용 단기 티켓(scope=sse)은 일반 API 인증에 사용 불가 — 거부.
+                // (티켓이 일반 API에도 통하면 쿼리 노출 시 60초간 전권이 되어 scope 격리가 무력화됨)
+                if (jwtUtil.isSseTicket(token)) {
+                    throw new CustomException(ErrorType.INVALID_TOKEN);
+                }
                 Long userId = jwtUtil.extractUserId(token);
 
                 // SecurityContext에 인증 정보 등록
