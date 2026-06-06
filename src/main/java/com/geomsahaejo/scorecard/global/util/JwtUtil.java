@@ -25,6 +25,11 @@ public class JwtUtil {
         this.expirationMs = expirationMs;
     }
 
+    // SSE 전용 단기 티켓 수명 (60초). EventSource는 헤더를 못 보내 토큰을 쿼리로 전달해야 하므로,
+    // 전권 access token 대신 SSE 구독에만 유효한 짧은 scope 한정 티켓을 따로 발급한다.
+    private static final long SSE_TICKET_TTL_MS = 60_000L;
+    private static final String SSE_SCOPE = "sse";
+
     // ── 토큰 생성 ──────────────────────────────────────────
     public String generateToken(Long userId) {
         Date now    = new Date();
@@ -36,6 +41,28 @@ public class JwtUtil {
                 .expiration(expiry)
                 .signWith(secretKey)
                 .compact();
+    }
+
+    // ── SSE 전용 단기 티켓 (scope=sse, 60초) ─────────────────
+    public String generateSseTicket(Long userId) {
+        Date now    = new Date();
+        Date expiry = new Date(now.getTime() + SSE_TICKET_TTL_MS);
+
+        return Jwts.builder()
+                .subject(String.valueOf(userId))
+                .claim("scope", SSE_SCOPE)
+                .issuedAt(now)
+                .expiration(expiry)
+                .signWith(secretKey)
+                .compact();
+    }
+
+    // ── SSE 티켓 검증: scope=sse 가 아니면(전권 토큰 포함) 거부 ──
+    public void validateSseTicket(String token) {
+        Object scope = getClaims(token).get("scope");
+        if (!SSE_SCOPE.equals(scope)) {
+            throw new CustomException(ErrorType.INVALID_TOKEN);
+        }
     }
 
     // ── userId 추출 ────────────────────────────────────────

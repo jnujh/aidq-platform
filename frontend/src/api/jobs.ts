@@ -51,6 +51,15 @@ export const jobsApi = {
     return client.delete<{ success: boolean }>(`/api/jobs/${jobId}`);
   },
 
+  // SSE 구독용 단기 티켓(scope=sse, 60초) 발급. Authorization 헤더로 인증되며,
+  // EventSource 쿼리에는 전권 토큰 대신 이 티켓만 노출한다.
+  async getSseTicket(): Promise<string> {
+    const res = await client.post<{ success: boolean; data: { ticket: string } }>(
+      '/api/jobs/subscribe-ticket'
+    );
+    return res.data.data.ticket;
+  },
+
   retryJob(parentJobId: number, file: File, jobName?: string) {
     const formData = new FormData();
     formData.append('file', file);

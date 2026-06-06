@@ -77,7 +77,10 @@ export default function JobsPage() {
   }, []);
 
   // SSE 구독 관리: pending 작업 유무에 따라 연결/해제
+  // 초기 로드(loading) 완료 후에 판단해야 함 — 로드 전 jobs=[] 상태에서 hasPending=false로
+  // 오판해 구독을 건너뛰는 버그 방지.
   useEffect(() => {
+    if (loading) return;
     const hasPending = jobs.some(
       (job) => job.status === 'PENDING' || job.status === 'PROCESSING'
     );
@@ -106,7 +109,7 @@ export default function JobsPage() {
       unsubscribeRef.current();
       unsubscribeRef.current = null;
     }
-  }, [jobs, fetchJobs]);
+  }, [jobs, fetchJobs, loading]);
 
   // 컴포넌트 언마운트 시 정리
   useEffect(() => {
