@@ -19,22 +19,11 @@
 
 ## 아키텍처
 
-```
-[React 19 + Ant Design]  →  [Nginx (TLS 종단 + 리버스 프록시)]
-                                   ↓
-                            [Spring Boot API]  →  [MySQL 8]
-                              ↓         ↓
-                        [RabbitMQ]    [RAG Service (FastAPI)]
-                        ↙        ↘         ↓
-              diagnosis.queue   result.queue  [ChromaDB] + [Claude Haiku]
-                    ↓                ↑
-              [Bridge → Celery chord 병렬 진단]  ←→  [Redis (chord result backend)]
-                코디네이터(경계 스냅) → process_chunk × N → aggregate_results
-                    ↓                                          ↓
-                [S3 Range GET (워커별 자기 구간 직접 읽기)]
-```
+![시스템 아키텍처 — 4-tier 비동기 진단 파이프라인](assets/architecture.png)
 
-> 소용량(<32MB)은 단건 처리, 대용량은 byte-range 청크(기본 256MB, t3 워커 128MB)로 분할 후 chord 병렬 진단.
+*프론트엔드(React) → Nginx(TLS) → Spring Boot API(중앙 허브) → RabbitMQ → DSC 엔진(Python·N개 병렬 워커) → RAG 서비스(FastAPI). MySQL은 메타데이터, AWS S3는 대용량 데이터를 담당합니다.*
+
+> 소용량(<32MB)은 단건 처리, 대용량은 byte-range 청크(기본 256MB, t3 워커 128MB)로 분할 후 Celery chord 병렬 진단.
 > **분할 불변성** — 부분 지표를 원시 카운트(가산)로 표현해 청크 경계와 무관하게 합산 결과가 동일합니다(워커수 1/2/4에서 score 99.96 동일).
 > 결과 메시지 형식이 동일해 Spring Boot 변경이 필요 없습니다.
 
@@ -42,9 +31,9 @@
 
 실 AWS 측정. 격리 환경 **c5.2xlarge(8vCPU)** + 교차검증 **t3 fleet 4워커**.
 
-![100GB 진단 시간 — 1워커 약 2.9시간에서 워커 증설로 단축](assets/benchmark-hero-100gb.png)
+![100GB 고정 — 워커 증설에 따른 진단 시간 단축](assets/benchmark-time-reduction.png)
 
-*100GB(102GB, 약 800청크) 진단: 1워커 약 2.9시간 → 4워커 46.8분 → 8워커 39.5분. 점수 99.96 무손상.*
+*100GB(102GB, 약 800청크) 진단: 1워커 약 2.9시간 → 4워커 46.8분(3.7×) → 8워커 39.5분(4.4×). 점수 99.96 무손상. 채워진 마커는 실측, 빈 마커는 Amdahl 예측.*
 
 | 워커 수 | 100GB 소요 | Speedup |
 |--------:|-----------:|--------:|
@@ -56,7 +45,11 @@
 - **하드웨어 무관 재현:** t3 fleet 4워커 **3.79×** ≈ c5 4워커 **3.75×**.
 - **Amdahl 예측(측정 기반, s≈1.9%):** 8워커 **7.1×**, 16워커 **12.5×** — 단일 박스 수직 패킹 포화를 수평 확장으로 돌파.
 
-> 데이터 품질 점수와 ML 모델 성능의 상관관계를 실증하는 연구도 함께 진행했습니다 (정량 결과는 로컬 문서 참고).
+### 연구 — 데이터 품질 ↔ ML 성능 상관
+
+![DSC 점수와 ML 성능의 상관관계](assets/ml-correlation.png)
+
+*"데이터 품질(DSC) 점수가 높을수록 모델 성능이 좋아진다"를 실험으로 확인한 상관 연구 (정형 분류 3개 데이터셋·5개 모델·435 실험). 굵은 선은 품질 구간별 성능 추세(isotonic).*
 
 ## 기술 스택
 
