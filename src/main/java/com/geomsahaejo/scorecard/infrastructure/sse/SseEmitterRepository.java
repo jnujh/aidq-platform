@@ -3,6 +3,7 @@ package com.geomsahaejo.scorecard.infrastructure.sse;
 import org.springframework.stereotype.Repository;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -34,6 +35,6 @@ public class SseEmitterRepository {
 
     // 하트비트 등 전체 순회용 (스냅샷 복사본 반환 — 순회 중 제거 안전)
     public Map<Long, SseEmitter> getAll() {
-        return new java.util.HashMap<>(emitters);
+        return new HashMap<>(emitters);
     }
 }
